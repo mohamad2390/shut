@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: shut
+
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5433/shut
+    username: shut_user
+    password: "mohamad1379"
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+
+telegram:
+  bot:
+    enabled: false
+    token: ${TELEGRAM_BOT_TOKEN:}
+    api-base-url: https://api.telegram.org
+    poll-timeout-seconds: 30
+    retry-delay-seconds: 5
+    channel-id: ${TELEGRAM_CHANNEL_ID:}
+    channel-link: ${TELEGRAM_CHANNEL_LINK:}
