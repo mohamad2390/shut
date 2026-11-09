@@ -35,10 +35,11 @@ management:
 
 telegram:
   bot:
-    enabled: false
-    token: ${TELEGRAM_BOT_TOKEN:}
+    enabled: true
+    token: ${TELEGRAM_BOT_TOKEN:5664494585:AAEilIhghwSeftActE4E1u3-PfWVoRDc5mU}
     api-base-url: https://api.telegram.org
     poll-timeout-seconds: 30
     retry-delay-seconds: 5
-    channel-id: ${TELEGRAM_CHANNEL_ID:}
-    channel-link: ${TELEGRAM_CHANNEL_LINK:}
+    channel-id: ${TELEGRAM_CHANNEL_ID:@WWWSHOOT}
+    channel-link: ${TELEGRAM_CHANNEL_LINK:https://t.me/WWWSHOOT}
+    storage-channel-id: ${TELEGRAM_STORAGE_CHANNEL_ID:}

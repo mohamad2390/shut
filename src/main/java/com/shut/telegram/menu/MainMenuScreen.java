@@ -20,13 +20,4 @@ public final class MainMenuScreen {
                                 InlineKeyboardButton.callback("👤 پروفایل", MenuCallbacks.PROFILE))
                         .build());
     }
-
-    /** A screen for a section that is not built yet, with a way back to the menu. */
-    public static Screen comingSoon(String title) {
-        return new Screen(
-                title + "\n\nاین بخش هنوز آماده نیست و به‌زودی اضافه می‌شه.",
-                new KeyboardBuilder()
-                        .row(InlineKeyboardButton.callback("🏠 منوی اصلی", MenuCallbacks.HOME))
-                        .build());
-    }
 }

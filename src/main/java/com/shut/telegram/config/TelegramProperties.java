@@ -6,6 +6,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /**
  * Typed binding for the {@code telegram.bot.*} section of application.yml.
  * {@code channelId} ("@name" or numeric id) turns on the membership check; blank disables it.
+ * {@code storageChannelId} is a private channel where the bot keeps a backup copy of uploaded portfolio media;
+ * blank disables backups.
  */
 @ConfigurationProperties(prefix = "telegram.bot")
 public record TelegramProperties(
@@ -15,6 +17,7 @@ public record TelegramProperties(
         @DefaultValue("30") int pollTimeoutSeconds,
         @DefaultValue("5") int retryDelaySeconds,
         String channelId,
-        String channelLink
+        String channelLink,
+        String storageChannelId
 ) {
 }

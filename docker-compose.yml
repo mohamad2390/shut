@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: shut
       POSTGRES_USER: shut_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: mohamad1379
     ports:
       - "5433:5432"
     volumes:

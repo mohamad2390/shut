@@ -5,10 +5,15 @@ import com.shut.telegram.config.TelegramProperties;
 import com.shut.telegram.model.AnswerCallbackQueryRequest;
 import com.shut.telegram.model.ApiResponse;
 import com.shut.telegram.model.ChatMember;
+import com.shut.telegram.model.CopyMessageRequest;
+import com.shut.telegram.model.DeleteMessageRequest;
+import com.shut.telegram.model.EditMessageReplyMarkupRequest;
 import com.shut.telegram.model.EditMessageTextRequest;
 import com.shut.telegram.model.GetChatMemberRequest;
 import com.shut.telegram.model.GetUpdatesRequest;
 import com.shut.telegram.model.Message;
+import com.shut.telegram.model.MessageId;
+import com.shut.telegram.model.SendMediaRequest;
 import com.shut.telegram.model.SendMessageRequest;
 import com.shut.telegram.model.TelegramUser;
 import com.shut.telegram.model.Update;
@@ -59,6 +64,29 @@ class RestTelegramApiClient implements TelegramApiClient {
     @Override
     public void editMessageText(EditMessageTextRequest request) {
         call("editMessageText", request, new ParameterizedTypeReference<ApiResponse<Message>>() { });
+    }
+
+    @Override
+    public void sendMedia(SendMediaRequest request) {
+        call(request.apiMethod(), request, new ParameterizedTypeReference<ApiResponse<Message>>() { });
+    }
+
+    @Override
+    public void editMessageReplyMarkup(EditMessageReplyMarkupRequest request) {
+        call("editMessageReplyMarkup", request, new ParameterizedTypeReference<ApiResponse<Message>>() { });
+    }
+
+    @Override
+    public long copyMessage(String toChatId, long fromChatId, long messageId) {
+        MessageId copy = call("copyMessage", new CopyMessageRequest(toChatId, fromChatId, messageId),
+                new ParameterizedTypeReference<ApiResponse<MessageId>>() { });
+        return copy.messageId();
+    }
+
+    @Override
+    public void deleteMessage(String chatId, long messageId) {
+        call("deleteMessage", new DeleteMessageRequest(chatId, messageId),
+                new ParameterizedTypeReference<ApiResponse<Boolean>>() { });
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.shut.common.text;
 
+import java.util.Locale;
+
 /** Converts between ASCII digits and Persian digits. */
 public final class PersianDigits {
 
@@ -20,6 +22,11 @@ public final class PersianDigits {
 
     public static String toPersian(long number) {
         return toPersian(Long.toString(number));
+    }
+
+    /** Formats a number with Persian digits and the Persian thousands separator, e.g. ۱٬۰۰۰٬۰۰۰. */
+    public static String toPersianGrouped(long number) {
+        return toPersian(String.format(Locale.ROOT, "%,d", number)).replace(',', '\u066C');
     }
 
     /** Replaces Persian and Arabic-Indic digits with ASCII digits so the text can be parsed. */
