@@ -48,6 +48,9 @@ public class PriceItem {
         this.createdAt = OffsetDateTime.now();
     }
 
+    public void changeAmount(long amount) { this.amount = amount; }
+    public void changeUnit(PricingUnit unit) { this.unit = unit; }
+
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public String getTitle() { return title; }

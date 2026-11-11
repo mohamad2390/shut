@@ -26,6 +26,18 @@ class CalendarScreensTest {
     }
 
     @Test
+    void labelsDaysWithTheJalaliDayOfMonthNotTheGregorianOne() {
+        List<String> labels = aban(Map.of()).markup().inlineKeyboard().stream()
+                .skip(1).limit(6).flatMap(List::stream)
+                .map(InlineKeyboardButton::text)
+                .filter(text -> !text.equals("·"))
+                .toList();
+
+        assertThat(labels).hasSize(30);
+        assertThat(labels).contains("۱", "۱۵", "۳۰");
+    }
+
+    @Test
     void putsSaturdayOnTheRightOfTheWeekdayHeader() {
         List<InlineKeyboardButton> header = aban(Map.of()).markup().inlineKeyboard().get(0);
 

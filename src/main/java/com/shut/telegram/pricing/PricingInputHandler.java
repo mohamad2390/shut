@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.Set;
 
-/** Receives the text a user types while adding a service: first its name, then its price. */
+/** Receives the text a user types while adding a service (its name, then its price) or changing a price. */
 @Component
 @TelegramBotEnabled
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -31,7 +31,8 @@ class PricingInputHandler implements UpdateHandler {
     private static final Set<ConversationStep> PRICING_STEPS = Set.of(
             ConversationStep.AWAITING_PRICE_TITLE,
             ConversationStep.AWAITING_PRICE_UNIT,
-            ConversationStep.AWAITING_PRICE_AMOUNT);
+            ConversationStep.AWAITING_PRICE_AMOUNT,
+            ConversationStep.AWAITING_PRICE_EDIT_AMOUNT);
 
     private final ConversationService conversations;
     private final MembershipGate membershipGate;
@@ -83,8 +84,32 @@ class PricingInputHandler implements UpdateHandler {
             case AWAITING_PRICE_UNIT -> messenger.send(chatId,
                     PricingScreens.askUnit(state.getData().getOrDefault(PricingCallbackHandler.TITLE_KEY, "")));
             case AWAITING_PRICE_AMOUNT -> receiveAmount(from, chatId, message.text(), state.getData());
+            case AWAITING_PRICE_EDIT_AMOUNT -> receiveNewAmount(from, chatId, message.text(), state.getData());
             default -> { }
         }
+    }
+
+    private void receiveNewAmount(TelegramUser from, long chatId, String raw, Map<String, String> data) {
+        long itemId;
+        try {
+            itemId = Long.parseLong(data.getOrDefault(PricingCallbackHandler.ITEM_KEY, ""));
+        } catch (NumberFormatException e) {
+            conversations.clear(from.id());
+            return;
+        }
+
+        long amount;
+        try {
+            amount = PriceAmountParser.parse(raw);
+        } catch (InvalidPriceInputException e) {
+            messenger.sendText(chatId, e.getMessage() + "\n\nدوباره بفرست یا برای انصراف /cancel رو بزن.");
+            return;
+        }
+
+        boolean updated = pricing.updateAmount(itemId, accounts.resolve(from).getId(), amount).isPresent();
+        conversations.clear(from.id());
+        messenger.sendText(chatId, updated ? "✅ قیمت عوض شد." : "این خدمت دیگه وجود نداره.");
+        messenger.send(chatId, screens.home(from));
     }
 
     private void receiveTitle(TelegramUser from, long chatId, String raw) {

@@ -1,6 +1,5 @@
 package com.shut.telegram.pricing;
 
-import com.shut.common.text.PersianDigits;
 import com.shut.pricing.PriceItem;
 import com.shut.pricing.PricingService;
 import com.shut.pricing.PricingUnit;
@@ -35,14 +34,15 @@ final class PricingScreens {
         }
 
         StringBuilder text = new StringBuilder("💰 قیمت‌ها\n");
-        items.forEach(item -> text.append("\n• ").append(describe(item)));
+        items.forEach(item -> text.append("\n• ").append(PriceText.describe(item)));
         text.append("\n\nقیمت‌ها به تومان هستن.");
 
         KeyboardBuilder keyboard = new KeyboardBuilder();
         if (items.size() < PricingService.MAX_ITEMS) {
             keyboard.row(InlineKeyboardButton.callback("➕ افزودن خدمت", PricingCallbacks.ADD));
         }
-        keyboard.row(InlineKeyboardButton.callback("🗑 حذف یک خدمت", PricingCallbacks.MANAGE))
+        keyboard.row(InlineKeyboardButton.callback("✏️ ویرایش یک خدمت", PricingCallbacks.EDIT))
+                .row(InlineKeyboardButton.callback("🗑 حذف یک خدمت", PricingCallbacks.MANAGE))
                 .row(InlineKeyboardButton.callback("🏠 منوی اصلی", MenuCallbacks.HOME));
         return new Screen(text.toString(), keyboard.build());
     }
@@ -54,6 +54,45 @@ final class PricingScreens {
                 InlineKeyboardButton.callback("🗑 " + item.getTitle(), PricingCallbacks.delete(item.getId()))));
         keyboard.row(InlineKeyboardButton.callback("↩️ برگشت", PricingCallbacks.CANCEL));
         return new Screen("کدوم خدمت حذف بشه؟", keyboard.build());
+    }
+
+    /** One button per service; pressing a button opens it for editing. */
+    static Screen editMenu(List<PriceItem> items) {
+        KeyboardBuilder keyboard = new KeyboardBuilder();
+        items.forEach(item -> keyboard.row(
+                InlineKeyboardButton.callback("✏️ " + item.getTitle(), PricingCallbacks.item(item.getId()))));
+        keyboard.row(InlineKeyboardButton.callback("↩️ برگشت", PricingCallbacks.CANCEL));
+        return new Screen("کدوم خدمت رو ویرایش کنیم؟", keyboard.build());
+    }
+
+    static Screen item(PriceItem item) {
+        return new Screen(
+                "✏️ " + PriceText.describe(item),
+                new KeyboardBuilder()
+                        .row(InlineKeyboardButton.callback("💰 تغییر قیمت", PricingCallbacks.editAmount(item.getId())),
+                                InlineKeyboardButton.callback("📏 تغییر واحد", PricingCallbacks.editUnit(item.getId())))
+                        .row(InlineKeyboardButton.callback("↩️ برگشت", PricingCallbacks.CANCEL))
+                        .build());
+    }
+
+    static Screen askNewAmount(PriceItem item) {
+        return new Screen(
+                "💰 " + PriceText.describe(item) + "\n\nقیمت تازه رو به تومان و فقط با عدد بفرست. مثلاً ۵۰۰۰۰۰",
+                new KeyboardBuilder()
+                        .row(InlineKeyboardButton.callback("انصراف", PricingCallbacks.item(item.getId())))
+                        .build());
+    }
+
+    static Screen unitMenu(PriceItem item) {
+        List<InlineKeyboardButton> units = Arrays.stream(PricingUnit.values())
+                .map(unit -> InlineKeyboardButton.callback(unit.phrase(), PricingCallbacks.setUnit(item.getId(), unit)))
+                .toList();
+        return new Screen(
+                "📏 " + item.getTitle() + "\n\nقیمت رو برای چی حساب می‌کنی؟",
+                new KeyboardBuilder()
+                        .grid(units, 2)
+                        .row(InlineKeyboardButton.callback("انصراف", PricingCallbacks.item(item.getId())))
+                        .build());
     }
 
     static Screen askTitle() {
@@ -78,10 +117,5 @@ final class PricingScreens {
         return new Screen(
                 "➕ " + title + " (" + unit.phrase() + ")\n\nقیمت رو به تومان و فقط با عدد بفرست. مثلاً ۵۰۰۰۰۰",
                 CANCEL_ONLY);
-    }
-
-    static String describe(PriceItem item) {
-        return item.getTitle() + ": " + PersianDigits.toPersianGrouped(item.getAmount())
-                + " تومان، " + item.getUnit().phrase();
     }
 }

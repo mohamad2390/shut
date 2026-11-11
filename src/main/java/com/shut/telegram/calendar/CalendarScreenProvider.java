@@ -8,15 +8,10 @@ import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.model.TelegramUser;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-
 /** Builds the calendar page for a Telegram user. Months outside the markable range are clamped. */
 @Component
 @TelegramBotEnabled
 public class CalendarScreenProvider {
-
-    /** The current month and the eleven after it can be viewed. */
-    private static final int MONTHS_AHEAD = 11;
 
     private final TelegramAccountResolver accounts;
     private final CalendarService calendar;
@@ -32,14 +27,10 @@ public class CalendarScreenProvider {
     }
 
     Screen month(TelegramUser from, JalaliMonth requested) {
-        LocalDate today = calendar.today();
-        JalaliMonth first = JalaliMonth.of(today);
-        JalaliMonth last = first.plusMonths(MONTHS_AHEAD);
-        JalaliMonth month = requested.compareTo(first) < 0 ? first : requested.compareTo(last) > 0 ? last : requested;
-
+        JalaliMonth month = calendar.clamp(requested);
         Long userId = accounts.resolve(from).getId();
         var statuses = calendar.statuses(userId, month.atDay(1), month.atDay(month.length()));
-        return CalendarScreens.month(month, statuses, today, calendar.lastMarkableDay(),
-                month.compareTo(first) > 0, month.compareTo(last) < 0);
+        return CalendarScreens.month(month, statuses, calendar.today(), calendar.lastMarkableDay(),
+                calendar.hasPreviousMonth(month), calendar.hasNextMonth(month));
     }
 }

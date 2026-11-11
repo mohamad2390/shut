@@ -1,5 +1,6 @@
 package com.shut.calendar;
 
+import com.shut.common.calendar.JalaliMonth;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,9 @@ public class CalendarService {
     /** How far ahead a day can be marked. */
     public static final int MAX_DAYS_AHEAD = 366;
 
+    /** The current month and this many months after it can be viewed. */
+    public static final int MONTHS_AHEAD = 11;
+
     private final CalendarDayRepository repository;
     private final Clock clock;
 
@@ -31,6 +35,24 @@ public class CalendarService {
     /** The last day that can still be marked. */
     public LocalDate lastMarkableDay() {
         return today().plusDays(MAX_DAYS_AHEAD);
+    }
+
+    /** The given month, or the nearest month that can be viewed if it is too early or too late. */
+    public JalaliMonth clamp(JalaliMonth requested) {
+        JalaliMonth first = JalaliMonth.of(today());
+        JalaliMonth last = first.plusMonths(MONTHS_AHEAD);
+        if (requested.compareTo(first) < 0) {
+            return first;
+        }
+        return requested.compareTo(last) > 0 ? last : requested;
+    }
+
+    public boolean hasPreviousMonth(JalaliMonth month) {
+        return month.compareTo(JalaliMonth.of(today())) > 0;
+    }
+
+    public boolean hasNextMonth(JalaliMonth month) {
+        return month.compareTo(JalaliMonth.of(today()).plusMonths(MONTHS_AHEAD)) < 0;
     }
 
     /** The marked days between the two dates, inclusive. Days that are not set are absent. */

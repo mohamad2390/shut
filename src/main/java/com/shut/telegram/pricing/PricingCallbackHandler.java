@@ -24,6 +24,7 @@ class PricingCallbackHandler extends CallbackHandler {
 
     static final String TITLE_KEY = "title";
     static final String UNIT_KEY = "unit";
+    static final String ITEM_KEY = "itemId";
 
     private final TelegramAccountResolver accounts;
     private final PricingService pricing;
@@ -55,6 +56,11 @@ class PricingCallbackHandler extends CallbackHandler {
             case "unit" -> chooseUnit(context);
             case "manage" -> showDeleteMenu(context);
             case "del" -> deleteItem(context);
+            case "edit" -> showEditMenu(context);
+            case "item" -> parseItemId(context).ifPresent(id -> showItem(context, id));
+            case "amt" -> parseItemId(context).ifPresent(id -> askNewAmount(context, id));
+            case "units" -> parseItemId(context).ifPresent(id -> showUnitMenu(context, id));
+            case "su" -> parseItemId(context).ifPresent(id -> changeUnit(context, id));
             case "cancel" -> backToList(context);
             default -> { }
         }
@@ -85,6 +91,50 @@ class PricingCallbackHandler extends CallbackHandler {
         conversations.begin(context.user().id(), ConversationStep.AWAITING_PRICE_AMOUNT,
                 Map.of(TITLE_KEY, title, UNIT_KEY, unit.get().name()));
         messenger.show(context.chatId(), context.messageId(), PricingScreens.askAmount(title, unit.get()));
+    }
+
+    private void showEditMenu(CallbackContext context) {
+        conversations.clear(context.user().id());
+        messenger.show(context.chatId(), context.messageId(), PricingScreens.editMenu(pricing.list(userId(context))));
+    }
+
+    private void showItem(CallbackContext context, long itemId) {
+        conversations.clear(context.user().id());
+        pricing.findOwned(itemId, userId(context)).ifPresentOrElse(
+                item -> messenger.show(context.chatId(), context.messageId(), PricingScreens.item(item)),
+                () -> backToList(context));
+    }
+
+    private void askNewAmount(CallbackContext context, long itemId) {
+        pricing.findOwned(itemId, userId(context)).ifPresentOrElse(item -> {
+            conversations.begin(context.user().id(), ConversationStep.AWAITING_PRICE_EDIT_AMOUNT,
+                    Map.of(ITEM_KEY, Long.toString(itemId)));
+            messenger.show(context.chatId(), context.messageId(), PricingScreens.askNewAmount(item));
+        }, () -> backToList(context));
+    }
+
+    private void showUnitMenu(CallbackContext context, long itemId) {
+        pricing.findOwned(itemId, userId(context)).ifPresentOrElse(
+                item -> messenger.show(context.chatId(), context.messageId(), PricingScreens.unitMenu(item)),
+                () -> backToList(context));
+    }
+
+    private void changeUnit(CallbackContext context, long itemId) {
+        Optional<PricingUnit> unit = PricingUnit.fromKey(context.arg(2));
+        if (unit.isEmpty()) {
+            return;
+        }
+        pricing.updateUnit(itemId, userId(context), unit.get()).ifPresentOrElse(
+                item -> messenger.show(context.chatId(), context.messageId(), PricingScreens.item(item)),
+                () -> backToList(context));
+    }
+
+    private static Optional<Long> parseItemId(CallbackContext context) {
+        try {
+            return Optional.of(Long.parseLong(context.arg(1)));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
     }
 
     private void showDeleteMenu(CallbackContext context) {

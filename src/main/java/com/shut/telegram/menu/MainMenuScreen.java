@@ -1,6 +1,8 @@
 package com.shut.telegram.menu;
 
+import com.shut.telegram.browse.BrowseCallbacks;
 import com.shut.telegram.messaging.KeyboardBuilder;
+import com.shut.telegram.project.ProjectCallbacks;
 import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.model.InlineKeyboardButton;
 
@@ -18,6 +20,8 @@ public final class MainMenuScreen {
                                 InlineKeyboardButton.callback("📅 تقویم", MenuCallbacks.CALENDAR))
                         .row(InlineKeyboardButton.callback("💰 قیمت‌ها", MenuCallbacks.PRICING),
                                 InlineKeyboardButton.callback("👤 پروفایل", MenuCallbacks.PROFILE))
+                        .row(InlineKeyboardButton.callback("🔎 جستجوی اعضا", BrowseCallbacks.START),
+                                InlineKeyboardButton.callback("📋 پروژه‌ها", ProjectCallbacks.HOME))
                         .build());
     }
 }
