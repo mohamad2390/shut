@@ -5,6 +5,7 @@ import com.shut.telegram.model.EditMessageReplyMarkupRequest;
 import com.shut.telegram.model.EditMessageTextRequest;
 import com.shut.telegram.model.SendMediaRequest;
 import com.shut.telegram.model.SendMessageRequest;
+import com.shut.telegram.model.SendWidgetRequest;
 import com.shut.telegram.model.TelegramUser;
 import com.shut.telegram.model.Update;
 
@@ -29,6 +30,15 @@ public interface TelegramApiClient {
 
     /** Sends a photo, video or document that Telegram already has, identified by its file id. */
     void sendMedia(SendMediaRequest request);
+
+    /**
+     * Sends an HTML widget and returns the id of the new message.
+     * Widgets only work in private chats, so this fails for other chats.
+     */
+    long sendWidget(SendWidgetRequest request);
+
+    /** Answers a tap inside a widget. Every {@code widget_query} must be answered within 15 seconds. */
+    void answerWidgetQuery(String widgetQueryId, String data);
 
     /** Replaces only the keyboard of a message the bot sent earlier. */
     void editMessageReplyMarkup(EditMessageReplyMarkupRequest request);

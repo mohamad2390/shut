@@ -24,10 +24,10 @@ public class Review {
     @Column(name = "reviewer_id", nullable = false, updatable = false)
     private Long reviewerId;
 
-    @Column(name = "rating", nullable = false)
-    private Integer rating;
+    @Column(nullable = false)
+    private int rating;
 
-    @Column(name = "comment", length = 500)
+    @Column(length = 500)
     private String comment;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -39,7 +39,7 @@ public class Review {
     protected Review() {
     }
 
-    public Review(Long providerId, Long reviewerId, Integer rating) {
+    public Review(Long providerId, Long reviewerId, int rating) {
         this.providerId = providerId;
         this.reviewerId = reviewerId;
         this.rating = rating;
@@ -47,7 +47,7 @@ public class Review {
         this.updatedAt = this.createdAt;
     }
 
-    public void changeRating(Integer rating) {
+    public void changeRating(int rating) {
         this.rating = rating;
         this.updatedAt = OffsetDateTime.now();
     }
@@ -61,7 +61,7 @@ public class Review {
     public Long getId() { return id; }
     public Long getProviderId() { return providerId; }
     public Long getReviewerId() { return reviewerId; }
-    public Integer getRating() { return rating; }
+    public int getRating() { return rating; }
     public String getComment() { return comment; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

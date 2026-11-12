@@ -4,6 +4,7 @@ import com.shut.browse.ProviderDetails;
 import com.shut.browse.ProviderSearchService;
 import com.shut.calendar.CalendarService;
 import com.shut.common.calendar.JalaliMonth;
+import com.shut.pricing.PriceItem;
 import com.shut.pricing.PricingService;
 import com.shut.review.ReviewService;
 import com.shut.showcase.ShowcaseCategory;
@@ -17,6 +18,7 @@ import com.shut.telegram.conversation.ConversationStep;
 import com.shut.telegram.handler.CallbackContext;
 import com.shut.telegram.handler.CallbackHandler;
 import com.shut.telegram.membership.MembershipGate;
+import com.shut.telegram.widget.PriceWidgetPresenter;
 import com.shut.telegram.messaging.BotMessenger;
 import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.model.SendMediaRequest;
@@ -25,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -46,11 +49,12 @@ class BrowseCallbackHandler extends CallbackHandler {
     private final PricingService pricing;
     private final CalendarService calendar;
     private final ReviewService reviews;
+    private final PriceWidgetPresenter priceWidgets;
 
     BrowseCallbackHandler(TelegramApiClient telegram, MembershipGate membershipGate, BotMessenger messenger,
                           ConversationService conversations, BrowseSession session, ProviderSearchService providers,
                           ShowcaseService showcase, PricingService pricing, CalendarService calendar,
-                          ReviewService reviews) {
+                          ReviewService reviews, PriceWidgetPresenter priceWidgets) {
         super(telegram, membershipGate);
         this.telegram = telegram;
         this.messenger = messenger;
@@ -61,6 +65,7 @@ class BrowseCallbackHandler extends CallbackHandler {
         this.pricing = pricing;
         this.calendar = calendar;
         this.reviews = reviews;
+        this.priceWidgets = priceWidgets;
     }
 
     @Override
@@ -80,8 +85,7 @@ class BrowseCallbackHandler extends CallbackHandler {
             case "sc" -> withProvider(context, details ->
                     BrowseScreens.showcaseHome(details, showcase.countsByCategory(details.userId())));
             case "cal" -> withProvider(context, details -> calendarScreen(details, context));
-            case "pr" -> withProvider(context, details ->
-                    BrowseScreens.prices(details, pricing.list(details.userId())));
+            case "pr" -> showPrices(context);
             case "sv" -> viewShowcaseItems(context);
             default -> { }
         }
@@ -103,6 +107,21 @@ class BrowseCallbackHandler extends CallbackHandler {
                 .map(screen)
                 .orElseGet(BrowseScreens::providerGone);
         show(context, result);
+    }
+
+    /** The prices go in the price widget; if it cannot be sent they are shown as text. */
+    private void showPrices(CallbackContext context) {
+        Optional<ProviderDetails> details = parseLong(context.arg(1)).flatMap(providers::find);
+        if (details.isEmpty()) {
+            show(context, BrowseScreens.providerGone());
+            return;
+        }
+        List<PriceItem> items = pricing.list(details.get().userId());
+        boolean sentAsWidget = !items.isEmpty()
+                && priceWidgets.show(context.chatId(), details.get().userId(), BrowseScreens.name(details.get()), items);
+        if (!sentAsWidget) {
+            show(context, BrowseScreens.prices(details.get(), items));
+        }
     }
 
     private Screen calendarScreen(ProviderDetails details, CallbackContext context) {

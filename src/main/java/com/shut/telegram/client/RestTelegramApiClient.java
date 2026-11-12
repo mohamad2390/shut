@@ -3,6 +3,7 @@ package com.shut.telegram.client;
 import com.shut.telegram.config.TelegramBotEnabled;
 import com.shut.telegram.config.TelegramProperties;
 import com.shut.telegram.model.AnswerCallbackQueryRequest;
+import com.shut.telegram.model.AnswerWidgetQueryRequest;
 import com.shut.telegram.model.ApiResponse;
 import com.shut.telegram.model.ChatMember;
 import com.shut.telegram.model.CopyMessageRequest;
@@ -15,6 +16,7 @@ import com.shut.telegram.model.Message;
 import com.shut.telegram.model.MessageId;
 import com.shut.telegram.model.SendMediaRequest;
 import com.shut.telegram.model.SendMessageRequest;
+import com.shut.telegram.model.SendWidgetRequest;
 import com.shut.telegram.model.TelegramUser;
 import com.shut.telegram.model.Update;
 import org.springframework.core.ParameterizedTypeReference;
@@ -29,7 +31,7 @@ import java.util.List;
 @TelegramBotEnabled
 class RestTelegramApiClient implements TelegramApiClient {
 
-    private static final List<String> ALLOWED_UPDATES = List.of("message", "callback_query");
+    private static final List<String> ALLOWED_UPDATES = List.of("message", "callback_query", "widget_query");
 
     private final RestClient restClient;
     private final String token;
@@ -69,6 +71,17 @@ class RestTelegramApiClient implements TelegramApiClient {
     @Override
     public void sendMedia(SendMediaRequest request) {
         call(request.apiMethod(), request, new ParameterizedTypeReference<ApiResponse<Message>>() { });
+    }
+
+    @Override
+    public long sendWidget(SendWidgetRequest request) {
+        return call("sendWidget", request, new ParameterizedTypeReference<ApiResponse<Message>>() { }).messageId();
+    }
+
+    @Override
+    public void answerWidgetQuery(String widgetQueryId, String data) {
+        call("answerWidgetQuery", new AnswerWidgetQueryRequest(widgetQueryId, data),
+                new ParameterizedTypeReference<ApiResponse<Boolean>>() { });
     }
 
     @Override

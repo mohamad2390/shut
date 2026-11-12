@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<style>
+:root{--ink:#4b3f63;--hint:#8d82a6;--chip:#fff;--chip-ink:#6a4cc0;--err:#d6456b;--shadow:0 2px 6px rgba(120,90,170,.14);
+--bg1:#fff1f6;--bg2:#f2edff;--bg3:#e4f4ff;--t1:#ffe1eb;--t2:#e8deff;--t3:#d8f5e7;--t4:#ffe8d4;--t5:#dbeeff}
+@media (prefers-color-scheme:dark){:root{--ink:#f1ecfb;--hint:#b6abd0;--chip:rgba(255,255,255,.14);--chip-ink:#dccdff;--err:#ff8fae;--shadow:0 2px 6px rgba(0,0,0,.3);
+--bg1:#2d2244;--bg2:#27244a;--bg3:#1f2e49;--t1:rgba(255,160,195,.2);--t2:rgba(190,160,255,.22);--t3:rgba(130,235,185,.18);--t4:rgba(255,190,140,.2);--t5:rgba(140,200,255,.2)}}
+*{box-sizing:border-box}
+body{margin:0;padding:0;color:var(--ink);background:linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3))}
+.w{padding:14px 12px 10px}
+h3{margin:0 0 10px;padding:0 4px;font-size:1.12em}
+h3::before{content:'✨ '}
+.l>*:nth-child(5n+1){--tile:var(--t1)}.l>*:nth-child(5n+2){--tile:var(--t2)}.l>*:nth-child(5n+3){--tile:var(--t3)}.l>*:nth-child(5n+4){--tile:var(--t4)}.l>*:nth-child(5n+5){--tile:var(--t5)}
+.r{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 8px;padding:10px 12px;border:0;border-radius:18px;background:var(--tile);box-shadow:var(--shadow);color:inherit;font:inherit;text-align:start}
+button.r:active{transform:scale(.98)}
+.i{flex:none;width:38px;height:38px;border-radius:50%;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:1.25em}
+.n{flex:1;min-width:0}
+.m{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:4px}
+.s small{color:var(--hint);font-size:.82em}
+.p{max-width:100%;overflow-wrap:anywhere;padding:3px 11px;border-radius:999px;background:var(--chip);color:var(--chip-ink);font-size:.92em;font-weight:bold}
+.a{flex:none;color:var(--hint)}
+.t{display:flex;justify-content:space-between;padding:2px 6px 6px;font-weight:bold}
+.e{text-align:center;color:var(--hint);padding:20px 0}
+.x{text-align:center;color:var(--err);font-size:.85em;margin:0 0 4px}
+.f{display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 0 max(4px,env(safe-area-inset-bottom))}
+.f button{border:0;border-radius:999px;padding:8px 16px;background:var(--chip);color:var(--chip-ink);font:inherit;font-weight:bold;box-shadow:var(--shadow)}
+.f button:disabled{opacity:.45}
+.f span{color:var(--hint);font-size:.85em;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="w" id="m"></div>
+<script>
+const W=window.TelegramWidget,M=document.getElementById('m');
+let S,B,E;
+const fa=n=>Number(n).toLocaleString('fa-IR');
+const P=s=>{try{return JSON.parse(s)}catch(e){return null}};
+function h(t,c,x,p){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;if(p)p.appendChild(e);return e}
+function draw(){
+ M.textContent='';
+ if(!S){h('p','e',E?'خطا در دریافت اطلاعات':'در حال بارگذاری…',M);return}
+ h('h3','',S.h,M);
+ const L=S.i||[];
+ if(!L.length)h('p','e','موردی ثبت نشده است.',M);
+ const G=h('div','l',null,M);
+ L.forEach(x=>{
+  const o=x[5],r=h(o?'button':'div','r',null,G);
+  if(o){r.dataset.q='o:'+x[0];r.disabled=!!B}
+  h('span','i',x[1],r);
+  const n=h('div','n',null,r);
+  h('div','m',x[2],n);
+  const s=h('div','s',null,n);
+  if(x[3]!=null)h('span','p',fa(x[3])+' تومان',s);
+  if(x[4])h('small','',x[4]==='ثابت'?'قیمت ثابت':'هر '+x[4],s);
+  if(o)h('span','a','‹',r)
+ });
+ if(S.t!=null){const t=h('div','t',null,M);h('span','','جمع کل',t);h('span','p',fa(S.t)+' تومان',t)}
+ if(E)h('p','x',E==='RATE_LIMITED'?'کمی صبر کنید':'خطا، دوباره امتحان کنید',M);
+ if(S.b||S.c>1){
+  const f=h('div','f',null,M);
+  const bt=(l,q,d)=>{const b=h('button','',l,f);b.dataset.q=q;b.disabled=!!d||!!B};
+  if(S.b)bt('بازگشت','b');
+  if(S.c>1){bt('قبلی','p:'+(S.p-1),S.p<2);h('span','',fa(S.p)+' از '+fa(S.c),f);bt('بعدی','p:'+(S.p+1),S.p>=S.c)}
+ }
+}
+function ask(d){
+ W.request(d).then(a=>{B=0;const s=a.result&&P(a.result);if(s)S=s;draw()},e=>{B=0;E=e.code;draw()});
+ B=1;E='';draw()
+}
+M.addEventListener('click',e=>{
+ let t=e.target;
+ while(t&&!(t.dataset&&t.dataset.q))t=t.parentNode;
+ if(t&&!t.disabled&&W&&!B)ask(t.dataset.q)
+});
+if(W){
+ W.onEvent('chatDataChanged',()=>{const s=P(W.chatData);if(s){S=s;E='';draw()}});
+ S=P(W.chatData);draw();
+ if(!S)W.request('i').then(a=>{const s=a.result&&P(a.result);if(s){S=s;draw()}},()=>{E='x';draw()});
+ W.ready()
+}else draw();
+</script>
+</body>
+</html>
