@@ -18,6 +18,7 @@ import com.shut.telegram.conversation.ConversationStep;
 import com.shut.telegram.handler.CallbackContext;
 import com.shut.telegram.handler.CallbackHandler;
 import com.shut.telegram.membership.MembershipGate;
+import com.shut.telegram.widget.CalendarWidgetPresenter;
 import com.shut.telegram.widget.PriceWidgetPresenter;
 import com.shut.telegram.messaging.BotMessenger;
 import com.shut.telegram.messaging.Screen;
@@ -50,11 +51,13 @@ class BrowseCallbackHandler extends CallbackHandler {
     private final CalendarService calendar;
     private final ReviewService reviews;
     private final PriceWidgetPresenter priceWidgets;
+    private final CalendarWidgetPresenter calendarWidgets;
 
     BrowseCallbackHandler(TelegramApiClient telegram, MembershipGate membershipGate, BotMessenger messenger,
                           ConversationService conversations, BrowseSession session, ProviderSearchService providers,
                           ShowcaseService showcase, PricingService pricing, CalendarService calendar,
-                          ReviewService reviews, PriceWidgetPresenter priceWidgets) {
+                          ReviewService reviews, PriceWidgetPresenter priceWidgets,
+                          CalendarWidgetPresenter calendarWidgets) {
         super(telegram, membershipGate);
         this.telegram = telegram;
         this.messenger = messenger;
@@ -66,6 +69,7 @@ class BrowseCallbackHandler extends CallbackHandler {
         this.calendar = calendar;
         this.reviews = reviews;
         this.priceWidgets = priceWidgets;
+        this.calendarWidgets = calendarWidgets;
     }
 
     @Override
@@ -84,7 +88,7 @@ class BrowseCallbackHandler extends CallbackHandler {
                     BrowseScreens.provider(details, reviews.summary(details.userId())));
             case "sc" -> withProvider(context, details ->
                     BrowseScreens.showcaseHome(details, showcase.countsByCategory(details.userId())));
-            case "cal" -> withProvider(context, details -> calendarScreen(details, context));
+            case "cal" -> showCalendar(context);
             case "pr" -> showPrices(context);
             case "sv" -> viewShowcaseItems(context);
             default -> { }
@@ -121,6 +125,22 @@ class BrowseCallbackHandler extends CallbackHandler {
                 && priceWidgets.show(context.chatId(), details.get().userId(), BrowseScreens.name(details.get()), items);
         if (!sentAsWidget) {
             show(context, BrowseScreens.prices(details.get(), items));
+        }
+    }
+
+    /**
+     * The calendar goes in the calendar widget, which moves between months by itself. The text calendar is the
+     * fallback when the widget cannot be sent, and the buttons of the text calendar ask for a month explicitly.
+     */
+    private void showCalendar(CallbackContext context) {
+        Optional<ProviderDetails> details = parseLong(context.arg(1)).flatMap(providers::find);
+        if (details.isEmpty()) {
+            show(context, BrowseScreens.providerGone());
+            return;
+        }
+        boolean asksForMonth = parseMonth(context).isPresent();
+        if (asksForMonth || !calendarWidgets.show(context.chatId(), details.get().userId(), BrowseScreens.name(details.get()))) {
+            show(context, calendarScreen(details.get(), context));
         }
     }
 

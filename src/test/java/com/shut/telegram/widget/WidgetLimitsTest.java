@@ -17,6 +17,13 @@ class WidgetLimitsTest {
     }
 
     @Test
+    void theCalendarWidgetIsSmallEnoughForTelegram() throws Exception {
+        String html = new ClassPathResource(WidgetHtml.CALENDAR_RESOURCE).getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(WidgetLimits.problemWith(html)).isNull();
+    }
+
+    @Test
     void aPageWithANulCharacterIsRefused() {
         assertThat(WidgetLimits.problemWith("<p>a\u0000b</p>")).contains("NUL");
     }

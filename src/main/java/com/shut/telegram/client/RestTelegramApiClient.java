@@ -31,7 +31,7 @@ import java.util.List;
 @TelegramBotEnabled
 class RestTelegramApiClient implements TelegramApiClient {
 
-    private static final List<String> ALLOWED_UPDATES = List.of("message", "callback_query", "widget_query");
+    private static final List<String> ALLOWED_UPDATES = List.of("message", "callback_query", "widget_query", "shared_widget_query");
 
     private final RestClient restClient;
     private final String token;

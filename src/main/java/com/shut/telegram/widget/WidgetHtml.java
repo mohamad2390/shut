@@ -9,24 +9,32 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/** The page of the price widget. It is checked against Telegram's limits once at startup, not on every send. */
+/** The pages of the widgets. They are checked against Telegram's limits once at startup, not on every send. */
 @Component
 @TelegramBotEnabled
 public class WidgetHtml {
 
     static final String PRICES_RESOURCE = "telegram/widgets/services-widget.html";
+    static final String CALENDAR_RESOURCE = "telegram/widgets/calendar-widget.html";
 
     private static final Logger log = LoggerFactory.getLogger(WidgetHtml.class);
 
     private final String prices;
+    private final String calendar;
 
     public WidgetHtml() {
         this.prices = load(PRICES_RESOURCE);
+        this.calendar = load(CALENDAR_RESOURCE);
     }
 
     /** The price widget page, or null if it is missing or too big for Telegram. */
     public String prices() {
         return prices;
+    }
+
+    /** The calendar widget page, or null if it is missing or too big for Telegram. */
+    public String calendar() {
+        return calendar;
     }
 
     private static String load(String resource) {
