@@ -8,11 +8,12 @@ import com.shut.telegram.membership.MembershipGate;
 import com.shut.telegram.messaging.BotMessenger;
 import com.shut.telegram.model.Message;
 import com.shut.telegram.model.Update;
+import com.shut.telegram.widget.MemberListWidgetPresenter;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** Receives the text a user types after opening the search, and shows the matching members. */
+/** Receives the text a user types after opening the search, and shows the matching members in the members widget. */
 @Component
 @TelegramBotEnabled
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -22,13 +23,16 @@ class SearchInputHandler implements UpdateHandler {
     private final MembershipGate membershipGate;
     private final BrowseSession session;
     private final BotMessenger messenger;
+    private final MemberListWidgetPresenter memberWidgets;
 
     SearchInputHandler(ConversationService conversations, MembershipGate membershipGate,
-                       BrowseSession session, BotMessenger messenger) {
+                       BrowseSession session, BotMessenger messenger,
+                       MemberListWidgetPresenter memberWidgets) {
         this.conversations = conversations;
         this.membershipGate = membershipGate;
         this.session = session;
         this.messenger = messenger;
+        this.memberWidgets = memberWidgets;
     }
 
     @Override
@@ -50,6 +54,9 @@ class SearchInputHandler implements UpdateHandler {
         if (!membershipGate.admit(message.from().id(), chatId)) {
             return;
         }
-        messenger.send(chatId, session.results(message.from(), message.text(), 0));
+        if (!memberWidgets.show(chatId, message.text())) {
+            // Nobody matched, or the widget could not be sent: the text list says so, and has the buttons to retry.
+            messenger.send(chatId, session.results(message.from(), message.text(), 0));
+        }
     }
 }

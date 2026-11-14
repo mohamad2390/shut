@@ -1,13 +1,16 @@
 package com.shut.telegram.client;
 
+import com.shut.telegram.cleanup.ChatMessageLog;
 import com.shut.telegram.config.TelegramBotEnabled;
 import com.shut.telegram.config.TelegramProperties;
 import com.shut.telegram.model.AnswerCallbackQueryRequest;
 import com.shut.telegram.model.AnswerWidgetQueryRequest;
 import com.shut.telegram.model.ApiResponse;
+import com.shut.telegram.model.BotCommand;
 import com.shut.telegram.model.ChatMember;
 import com.shut.telegram.model.CopyMessageRequest;
 import com.shut.telegram.model.DeleteMessageRequest;
+import com.shut.telegram.model.DeleteMessagesRequest;
 import com.shut.telegram.model.EditMessageReplyMarkupRequest;
 import com.shut.telegram.model.EditMessageTextRequest;
 import com.shut.telegram.model.GetChatMemberRequest;
@@ -17,6 +20,7 @@ import com.shut.telegram.model.MessageId;
 import com.shut.telegram.model.SendMediaRequest;
 import com.shut.telegram.model.SendMessageRequest;
 import com.shut.telegram.model.SendWidgetRequest;
+import com.shut.telegram.model.SetMyCommandsRequest;
 import com.shut.telegram.model.TelegramUser;
 import com.shut.telegram.model.Update;
 import org.springframework.core.ParameterizedTypeReference;
@@ -35,8 +39,10 @@ class RestTelegramApiClient implements TelegramApiClient {
 
     private final RestClient restClient;
     private final String token;
+    private final ChatMessageLog messageLog;
 
-    RestTelegramApiClient(RestClient telegramRestClient, TelegramProperties properties) {
+    RestTelegramApiClient(RestClient telegramRestClient, TelegramProperties properties, ChatMessageLog messageLog) {
+        this.messageLog = messageLog;
         this.restClient = telegramRestClient;
         this.token = properties.token();
     }
@@ -60,7 +66,7 @@ class RestTelegramApiClient implements TelegramApiClient {
 
     @Override
     public void sendMessage(SendMessageRequest request) {
-        call("sendMessage", request, new ParameterizedTypeReference<ApiResponse<Message>>() { });
+        track(call("sendMessage", request, new ParameterizedTypeReference<ApiResponse<Message>>() { }));
     }
 
     @Override
@@ -70,12 +76,14 @@ class RestTelegramApiClient implements TelegramApiClient {
 
     @Override
     public void sendMedia(SendMediaRequest request) {
-        call(request.apiMethod(), request, new ParameterizedTypeReference<ApiResponse<Message>>() { });
+        track(call(request.apiMethod(), request, new ParameterizedTypeReference<ApiResponse<Message>>() { }));
     }
 
     @Override
     public long sendWidget(SendWidgetRequest request) {
-        return call("sendWidget", request, new ParameterizedTypeReference<ApiResponse<Message>>() { }).messageId();
+        Message sent = call("sendWidget", request, new ParameterizedTypeReference<ApiResponse<Message>>() { });
+        track(sent);
+        return sent.messageId();
     }
 
     @Override
@@ -100,6 +108,25 @@ class RestTelegramApiClient implements TelegramApiClient {
     public void deleteMessage(String chatId, long messageId) {
         call("deleteMessage", new DeleteMessageRequest(chatId, messageId),
                 new ParameterizedTypeReference<ApiResponse<Boolean>>() { });
+    }
+
+    @Override
+    public void deleteMessages(String chatId, List<Long> messageIds) {
+        call("deleteMessages", new DeleteMessagesRequest(chatId, messageIds),
+                new ParameterizedTypeReference<ApiResponse<Boolean>>() { });
+    }
+
+    @Override
+    public void setMyCommands(List<BotCommand> commands) {
+        call("setMyCommands", new SetMyCommandsRequest(commands),
+                new ParameterizedTypeReference<ApiResponse<Boolean>>() { });
+    }
+
+    /** Remembers a message the bot just sent, so that the chat can be cleaned up later. */
+    private void track(Message sent) {
+        if (sent != null && sent.chat() != null) {
+            messageLog.record(sent.chat().id(), sent.messageId());
+        }
     }
 
     @Override

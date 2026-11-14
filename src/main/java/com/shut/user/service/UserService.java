@@ -12,12 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleService roleService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, RoleService roleService) {
         this.userRepository = userRepository;
+        this.roleService = roleService;
     }
 
-    /** Creates a customer account on first contact, or refreshes Telegram public fields. */
+    /** Creates an account with the default roles on first contact, or refreshes Telegram public fields. */
     @Transactional
     public User onboard(UserOnboardingRequest request) {
         return userRepository.findByTelegramId(request.telegramId())
@@ -31,6 +33,7 @@ public class UserService {
                     User user = new User(request.telegramId(), blankToNull(request.firstName()));
                     user.setTelegramUsername(blankToNull(request.telegramUsername()));
                     user.setLastName(blankToNull(request.lastName()));
+                    roleService.defaultRoles().forEach(user::addRole);
                     return userRepository.save(user);
                 });
     }

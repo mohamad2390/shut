@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<style>
+:root{--ink:#4b3f63;--hint:#8d82a6;--chip:#fff;--chip-ink:#6a4cc0;--err:#d6456b;--bg:#f6f0ff;
+--t1:#ffe1eb;--e1:#f2c4d4;--t2:#e8deff;--e2:#cdbff2;--t3:#d8f5e7;--e3:#b4e0c9;--t4:#ffe8d4;--e4:#f0cdb0;--t5:#dbeeff;--e5:#b9d6f2}
+@media (prefers-color-scheme:dark){:root{--ink:#f1ecfb;--hint:#b6abd0;--chip:#3b3260;--chip-ink:#dccdff;--err:#ff8fae;--bg:#272244;
+--t1:#4a3050;--e1:#39243f;--t2:#3d3668;--e2:#2e2850;--t3:#2f4a4a;--e3:#233a3a;--t4:#4f3f3f;--e4:#3d3030;--t5:#2f4260;--e5:#243349}}
+*{box-sizing:border-box}
+body{margin:0;padding:0;color:var(--ink);background:var(--bg)}
+.w{padding:14px 12px 12px}
+h3{margin:0 0 4px;padding:0 4px;font-size:1.15em}
+h3::before{content:'🖼 '}
+.s{margin:0 0 12px;padding:0 4px;color:var(--hint);font-size:.85em}
+.o{display:flex;direction:ltr;align-items:center;justify-content:space-between;gap:10px;width:100%;margin:0 0 8px;padding:14px 16px;border:0;border-radius:18px;background:var(--tile);box-shadow:0 2px 0 var(--edge);color:inherit;font:inherit}
+.o:nth-of-type(5n+1){--tile:var(--t1);--edge:var(--e1)}.o:nth-of-type(5n+2){--tile:var(--t2);--edge:var(--e2)}.o:nth-of-type(5n+3){--tile:var(--t3);--edge:var(--e3)}.o:nth-of-type(5n+4){--tile:var(--t4);--edge:var(--e4)}.o:nth-of-type(5n+5){--tile:var(--t5);--edge:var(--e5)}
+.o:disabled{color:var(--hint)}
+.n{direction:rtl;font-weight:bold}
+.p{flex:none;padding:3px 11px;border-radius:999px;background:var(--chip);color:var(--chip-ink);font-size:.88em;font-weight:bold}
+.e{text-align:center;color:var(--hint);padding:20px 0}
+.x{text-align:center;color:var(--err);font-size:.85em;margin:4px 0 0}
+</style>
+</head>
+<body>
+<div class="w" id="m"></div>
+<script>
+const W=window.TelegramWidget,M=document.getElementById('m');
+let S,B,E;
+const fa=n=>Number(n).toLocaleString('fa-IR');
+const P=s=>{try{return JSON.parse(s)}catch(e){return null}};
+function h(t,c,x,p){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;if(p)p.appendChild(e);return e}
+function draw(){
+ M.textContent='';
+ if(!S){h('p','e',E?'خطا در دریافت اطلاعات':'در حال بارگذاری…',M);return}
+ h('h3','','ویترین '+S.h,M);
+ const L=S.i||[];
+ if(!L.length){h('p','e','هنوز نمونه‌کاری اضافه نکرده است.',M);return}
+ h('p','s','یک دسته را بزنید، نمونه‌کارها در چت فرستاده می‌شوند.',M);
+ L.forEach(x=>{const b=h('button','o',null,M);b.dataset.q='o:'+x[0];b.disabled=!!B;h('span','p',fa(x[2]),b);h('span','n',x[1],b)});
+ if(E)h('p','x',E==='RATE_LIMITED'?'کمی صبر کنید':'خطا، دوباره امتحان کنید',M);
+}
+function ask(d){
+ W.request(d).then(()=>{B=0;draw()},e=>{B=0;E=e.code;draw()});
+ B=1;E='';draw()
+}
+M.addEventListener('click',e=>{
+ let t=e.target;
+ while(t&&!(t.dataset&&t.dataset.q))t=t.parentNode;
+ if(t&&!t.disabled&&W&&!B)ask(t.dataset.q)
+});
+if(W){
+ W.onEvent('chatDataChanged',()=>{const s=P(W.chatData);if(s){S=s;E='';draw()}});
+ S=P(W.chatData);draw();
+ if(!S)W.request('i').then(a=>{const s=a.result&&P(a.result);if(s){S=s;draw()}},()=>{E='x';draw()});
+ W.ready()
+}else draw();
+</script>
+</body>
+</html>

@@ -1,8 +1,10 @@
 package com.shut.telegram.pricing;
 
 import com.shut.pricing.PriceItem;
+import com.shut.pricing.PricingCatalog;
 import com.shut.pricing.PricingService;
 import com.shut.pricing.PricingUnit;
+import com.shut.pricing.ServiceType;
 import com.shut.telegram.menu.MenuCallbacks;
 import com.shut.telegram.messaging.KeyboardBuilder;
 import com.shut.telegram.messaging.Screen;
@@ -11,6 +13,7 @@ import com.shut.telegram.model.InlineKeyboardMarkup;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /** Everything the user sees in the price menu section. */
 final class PricingScreens {
@@ -26,7 +29,7 @@ final class PricingScreens {
     static Screen list(List<PriceItem> items) {
         if (items.isEmpty()) {
             return new Screen(
-                    "💰 قیمت‌ها\n\nهنوز خدمتی ثبت نکردی. مثلاً «عکاسی» با قیمت هر ساعت، یا «ادیت عکس» با قیمت هر عکس.",
+                    "💰 قیمت‌ها\n\nهنوز خدمتی ثبت نکردی. خدمتت رو از لیست انتخاب کن و قیمتش رو بنویس.",
                     new KeyboardBuilder()
                             .row(InlineKeyboardButton.callback("➕ افزودن خدمت", PricingCallbacks.ADD))
                             .row(InlineKeyboardButton.callback("🏠 منوی اصلی", MenuCallbacks.HOME))
@@ -34,7 +37,7 @@ final class PricingScreens {
         }
 
         StringBuilder text = new StringBuilder("💰 قیمت‌ها\n");
-        items.forEach(item -> text.append("\n• ").append(PriceText.describe(item)));
+        items.forEach(item -> text.append("\n• ").append(PriceText.line(item)));
         text.append("\n\nقیمت‌ها به تومان هستن.");
 
         KeyboardBuilder keyboard = new KeyboardBuilder();
@@ -60,14 +63,14 @@ final class PricingScreens {
     static Screen editMenu(List<PriceItem> items) {
         KeyboardBuilder keyboard = new KeyboardBuilder();
         items.forEach(item -> keyboard.row(
-                InlineKeyboardButton.callback("✏️ " + item.getTitle(), PricingCallbacks.item(item.getId()))));
+                InlineKeyboardButton.callback(item.getIcon() + " " + item.getTitle(), PricingCallbacks.item(item.getId()))));
         keyboard.row(InlineKeyboardButton.callback("↩️ برگشت", PricingCallbacks.CANCEL));
         return new Screen("کدوم خدمت رو ویرایش کنیم؟", keyboard.build());
     }
 
     static Screen item(PriceItem item) {
         return new Screen(
-                "✏️ " + PriceText.describe(item),
+                "✏️ " + PriceText.line(item),
                 new KeyboardBuilder()
                         .row(InlineKeyboardButton.callback("💰 تغییر قیمت", PricingCallbacks.editAmount(item.getId())),
                                 InlineKeyboardButton.callback("📏 تغییر واحد", PricingCallbacks.editUnit(item.getId())))
@@ -77,45 +80,71 @@ final class PricingScreens {
 
     static Screen askNewAmount(PriceItem item) {
         return new Screen(
-                "💰 " + PriceText.describe(item) + "\n\nقیمت تازه رو به تومان و فقط با عدد بفرست. مثلاً ۵۰۰۰۰۰",
+                "💰 " + PriceText.line(item) + "\n\nقیمت تازه رو به تومان و فقط با عدد بفرست. مثلاً ۵۰۰۰۰۰",
                 new KeyboardBuilder()
                         .row(InlineKeyboardButton.callback("انصراف", PricingCallbacks.item(item.getId())))
                         .build());
     }
 
-    static Screen unitMenu(PriceItem item) {
+    static Screen unitMenu(PriceItem item, Map<PricingUnit, String> unitIcons) {
         List<InlineKeyboardButton> units = Arrays.stream(PricingUnit.values())
-                .map(unit -> InlineKeyboardButton.callback(unit.phrase(), PricingCallbacks.setUnit(item.getId(), unit)))
+                .map(unit -> InlineKeyboardButton.callback(unitLabel(unit, unitIcons), PricingCallbacks.setUnit(item.getId(), unit)))
                 .toList();
         return new Screen(
-                "📏 " + item.getTitle() + "\n\nقیمت رو برای چی حساب می‌کنی؟",
+                "📏 " + item.getIcon() + " " + item.getTitle() + "\n\nقیمت رو برای چی حساب می‌کنی؟",
                 new KeyboardBuilder()
                         .grid(units, 2)
                         .row(InlineKeyboardButton.callback("انصراف", PricingCallbacks.item(item.getId())))
                         .build());
     }
 
-    static Screen askTitle() {
-        return new Screen(
-                "➕ خدمت جدید\n\nاسم خدمت رو بفرست. مثلاً «عکاسی پرتره» یا «ادیت عکس».",
-                CANCEL_ONLY);
-    }
-
-    static Screen askUnit(String title) {
-        List<InlineKeyboardButton> units = Arrays.stream(PricingUnit.values())
-                .map(unit -> InlineKeyboardButton.callback(unit.phrase(), PricingCallbacks.unit(unit)))
+    /** The services a member can pick from, two to a row, each with its icon. */
+    static Screen askService(List<ServiceType> services) {
+        List<InlineKeyboardButton> buttons = services.stream()
+                .map(service -> InlineKeyboardButton.callback(service.getIcon() + " " + service.getName(),
+                        PricingCallbacks.service(service.getId())))
                 .toList();
         return new Screen(
-                "➕ " + title + "\n\nقیمت رو برای چی حساب می‌کنی؟",
+                "➕ خدمت جدید\n\nخدمتت رو از لیست انتخاب کن.",
+                new KeyboardBuilder()
+                        .grid(buttons, 2)
+                        .row(InlineKeyboardButton.callback("انصراف", PricingCallbacks.CANCEL))
+                        .build());
+    }
+
+    /** Asked only for services that let the member name their own price; the name is optional. */
+    static Screen askName(ServiceType service) {
+        return new Screen(
+                "➕ " + service.getIcon() + " " + service.getName()
+                        + "\n\nاگه می‌خوای اسم دلخواه برای این خدمت بذاری، همین‌جا بفرست. مثلاً «عکاسی از غذا». اگه نمی‌خوای، «رد کردن» رو بزن.",
+                new KeyboardBuilder()
+                        .row(InlineKeyboardButton.callback("رد کردن", PricingCallbacks.SKIP_NAME))
+                        .row(InlineKeyboardButton.callback("انصراف", PricingCallbacks.CANCEL))
+                        .build());
+    }
+
+    /** @param name what the price is called: the member's own name, or the name of the service */
+    static Screen askUnit(ServiceType service, String name, Map<PricingUnit, String> unitIcons) {
+        List<InlineKeyboardButton> units = Arrays.stream(PricingUnit.values())
+                .map(unit -> InlineKeyboardButton.callback(unitLabel(unit, unitIcons), PricingCallbacks.unit(unit)))
+                .toList();
+        return new Screen(
+                "➕ " + service.getIcon() + " " + name + "\n\nقیمت رو برای چی حساب می‌کنی؟",
                 new KeyboardBuilder()
                         .grid(units, 2)
                         .row(InlineKeyboardButton.callback("انصراف", PricingCallbacks.CANCEL))
                         .build());
     }
 
-    static Screen askAmount(String title, PricingUnit unit) {
+    static Screen askAmount(ServiceType service, String name, PricingUnit unit) {
         return new Screen(
-                "➕ " + title + " (" + unit.phrase() + ")\n\nقیمت رو به تومان و فقط با عدد بفرست. مثلاً ۵۰۰۰۰۰",
+                "➕ " + service.getIcon() + " " + name + " (" + unit.phrase() + ")"
+                        + "\n\nقیمت رو به تومان و فقط با عدد بفرست. مثلاً ۵۰۰۰۰۰",
                 CANCEL_ONLY);
+    }
+
+    /** The button text of a unit: its icon from the database, then how it reads, e.g. "⏱ هر ساعت". */
+    static String unitLabel(PricingUnit unit, Map<PricingUnit, String> unitIcons) {
+        return unitIcons.getOrDefault(unit, PricingCatalog.DEFAULT_UNIT_ICON) + " " + unit.phrase();
     }
 }

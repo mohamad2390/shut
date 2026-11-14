@@ -20,7 +20,8 @@ enum ProfileField {
             (draft, raw) -> draft.baseCity = ProfileInputParser.text(raw, 100)),
     BASE_COUNTRY("کشور", "کشور محل کارت رو بفرست.",
             (draft, raw) -> draft.baseCountry = ProfileInputParser.text(raw, 100)),
-    SKILLS("مهارت‌ها", "مهارت‌هات رو بفرست و با ویرگول از هم جدا کن.\nمثلاً: عکاسی پرتره، تدوین، ادیت عکس",
+    SKILLS("مهارت‌ها", "مهارت‌هات رو از دکمه‌های زیر انتخاب کن (با هر بار زدن، اضافه یا کم می‌شه).\n"
+                    + "مهارتی که توی فهرست نیست رو هم می‌تونی بنویسی و با ویرگول از هم جدا کنی؛ به مهارت‌هات اضافه می‌شه.",
             (draft, raw) -> draft.skills = ProfileInputParser.list(raw, 15, 50)),
     SERVICE_CITIES("شهرهای فعالیت", "شهرهایی که برای کار بهشون می‌ری رو بفرست و با ویرگول از هم جدا کن.",
             (draft, raw) -> draft.serviceCities = ProfileInputParser.list(raw, 15, 50)),

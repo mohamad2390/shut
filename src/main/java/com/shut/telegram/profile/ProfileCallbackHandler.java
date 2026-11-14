@@ -25,14 +25,16 @@ class ProfileCallbackHandler extends CallbackHandler {
     private final ConversationService conversations;
     private final BotMessenger messenger;
     private final ProfileScreenProvider profileScreens;
+    private final ProfileSkillPicker skillPicker;
 
     ProfileCallbackHandler(TelegramApiClient telegram, MembershipGate membershipGate,
                            ConversationService conversations, BotMessenger messenger,
-                           ProfileScreenProvider profileScreens) {
+                           ProfileScreenProvider profileScreens, ProfileSkillPicker skillPicker) {
         super(telegram, membershipGate);
         this.conversations = conversations;
         this.messenger = messenger;
         this.profileScreens = profileScreens;
+        this.skillPicker = skillPicker;
     }
 
     @Override
@@ -44,6 +46,8 @@ class ProfileCallbackHandler extends CallbackHandler {
     protected void onCallback(CallbackContext context) {
         switch (context.arg(0)) {
             case "edit" -> startEditing(context);
+            case "skill" -> toggleSkill(context);
+            case "done" -> finishSkills(context);
             case "cancel" -> cancelEditing(context);
             default -> { }
         }
@@ -53,6 +57,10 @@ class ProfileCallbackHandler extends CallbackHandler {
         ProfileField.fromKey(context.arg(1)).ifPresent(field -> {
             conversations.begin(context.user().id(), ConversationStep.AWAITING_PROFILE_FIELD,
                     Map.of(FIELD_KEY, field.name()));
+            if (field == ProfileField.SKILLS) {
+                messenger.show(context.chatId(), context.messageId(), skillPicker.screen(context.user()));
+                return;
+            }
             Screen prompt = new Screen(
                     field.prompt(),
                     new KeyboardBuilder()
@@ -60,6 +68,20 @@ class ProfileCallbackHandler extends CallbackHandler {
                             .build());
             messenger.show(context.chatId(), context.messageId(), prompt);
         });
+    }
+
+    private void toggleSkill(CallbackContext context) {
+        try {
+            long serviceId = Long.parseLong(context.arg(1));
+            messenger.show(context.chatId(), context.messageId(), skillPicker.toggle(context.user(), serviceId));
+        } catch (NumberFormatException e) {
+            // A button from an old message; there is nothing to toggle.
+        }
+    }
+
+    private void finishSkills(CallbackContext context) {
+        conversations.clear(context.user().id());
+        messenger.show(context.chatId(), context.messageId(), profileScreens.forUser(context.user()));
     }
 
     private void cancelEditing(CallbackContext context) {

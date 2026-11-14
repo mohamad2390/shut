@@ -3,15 +3,14 @@ package com.shut.telegram.browse;
 import com.shut.browse.ProviderDetails;
 import com.shut.browse.ProviderSearchService;
 import com.shut.calendar.CalendarService;
+import com.shut.equipment.EquipmentService;
 import com.shut.common.calendar.JalaliMonth;
 import com.shut.pricing.PriceItem;
 import com.shut.pricing.PricingService;
 import com.shut.review.ReviewService;
 import com.shut.showcase.ShowcaseCategory;
-import com.shut.showcase.ShowcaseItem;
 import com.shut.showcase.ShowcaseService;
 import com.shut.telegram.client.TelegramApiClient;
-import com.shut.telegram.client.TelegramApiException;
 import com.shut.telegram.config.TelegramBotEnabled;
 import com.shut.telegram.conversation.ConversationService;
 import com.shut.telegram.conversation.ConversationStep;
@@ -19,13 +18,11 @@ import com.shut.telegram.handler.CallbackContext;
 import com.shut.telegram.handler.CallbackHandler;
 import com.shut.telegram.membership.MembershipGate;
 import com.shut.telegram.widget.CalendarWidgetPresenter;
+import com.shut.telegram.widget.MemberListWidgetPresenter;
+import com.shut.telegram.widget.ShowcaseWidgetPresenter;
 import com.shut.telegram.widget.PriceWidgetPresenter;
 import com.shut.telegram.messaging.BotMessenger;
 import com.shut.telegram.messaging.Screen;
-import com.shut.telegram.model.SendMediaRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -38,10 +35,6 @@ import java.util.function.Function;
 @TelegramBotEnabled
 class BrowseCallbackHandler extends CallbackHandler {
 
-    private static final int SHOWCASE_PAGE_SIZE = 5;
-    private static final Logger log = LoggerFactory.getLogger(BrowseCallbackHandler.class);
-
-    private final TelegramApiClient telegram;
     private final BotMessenger messenger;
     private final ConversationService conversations;
     private final BrowseSession session;
@@ -52,15 +45,21 @@ class BrowseCallbackHandler extends CallbackHandler {
     private final ReviewService reviews;
     private final PriceWidgetPresenter priceWidgets;
     private final CalendarWidgetPresenter calendarWidgets;
+    private final MemberListWidgetPresenter memberWidgets;
+    private final ShowcaseSender showcaseSender;
+    private final ShowcaseWidgetPresenter showcaseWidgets;
+    private final EquipmentService equipment;
 
     BrowseCallbackHandler(TelegramApiClient telegram, MembershipGate membershipGate, BotMessenger messenger,
                           ConversationService conversations, BrowseSession session, ProviderSearchService providers,
                           ShowcaseService showcase, PricingService pricing, CalendarService calendar,
                           ReviewService reviews, PriceWidgetPresenter priceWidgets,
-                          CalendarWidgetPresenter calendarWidgets) {
+                          CalendarWidgetPresenter calendarWidgets, MemberListWidgetPresenter memberWidgets,
+                          ShowcaseSender showcaseSender, ShowcaseWidgetPresenter showcaseWidgets,
+                          EquipmentService equipment) {
         super(telegram, membershipGate);
-        this.telegram = telegram;
         this.messenger = messenger;
+        this.equipment = equipment;
         this.conversations = conversations;
         this.session = session;
         this.providers = providers;
@@ -70,6 +69,9 @@ class BrowseCallbackHandler extends CallbackHandler {
         this.reviews = reviews;
         this.priceWidgets = priceWidgets;
         this.calendarWidgets = calendarWidgets;
+        this.memberWidgets = memberWidgets;
+        this.showcaseSender = showcaseSender;
+        this.showcaseWidgets = showcaseWidgets;
     }
 
     @Override
@@ -81,13 +83,13 @@ class BrowseCallbackHandler extends CallbackHandler {
     protected void onCallback(CallbackContext context) {
         switch (context.arg(0)) {
             case "start" -> startSearch(context);
-            case "all" -> show(context, session.results(context.user(), "", 0));
+            case "all" -> showEveryone(context);
             case "r" -> show(context, session.lastResults(context.user(), parseInt(context.arg(1)).orElse(0)));
             case "back" -> show(context, session.lastResults(context.user(), null));
             case "p" -> withProvider(context, details ->
-                    BrowseScreens.provider(details, reviews.summary(details.userId())));
-            case "sc" -> withProvider(context, details ->
-                    BrowseScreens.showcaseHome(details, showcase.countsByCategory(details.userId())));
+                    BrowseScreens.provider(details, reviews.summary(details.userId()),
+                            equipment.lines(details.userId())));
+            case "sc" -> showShowcase(context);
             case "cal" -> showCalendar(context);
             case "pr" -> showPrices(context);
             case "sv" -> viewShowcaseItems(context);
@@ -98,6 +100,13 @@ class BrowseCallbackHandler extends CallbackHandler {
     private void startSearch(CallbackContext context) {
         conversations.begin(context.user().id(), ConversationStep.AWAITING_SEARCH_QUERY, Map.of());
         show(context, BrowseScreens.searchPrompt());
+    }
+
+    /** Everyone goes in the members widget, best rated first; the text list is the fallback if it cannot be sent. */
+    private void showEveryone(CallbackContext context) {
+        if (!memberWidgets.show(context.chatId())) {
+            show(context, session.results(context.user(), "", 0));
+        }
     }
 
     private void show(CallbackContext context, Screen screen) {
@@ -152,6 +161,18 @@ class BrowseCallbackHandler extends CallbackHandler {
                 calendar.hasPreviousMonth(month), calendar.hasNextMonth(month));
     }
 
+    /** The categories go in the showcase widget; the text list is the fallback if it cannot be sent. */
+    private void showShowcase(CallbackContext context) {
+        Optional<ProviderDetails> details = parseLong(context.arg(1)).flatMap(providers::find);
+        if (details.isEmpty()) {
+            show(context, BrowseScreens.providerGone());
+            return;
+        }
+        if (!showcaseWidgets.show(context.chatId(), details.get())) {
+            show(context, BrowseScreens.showcaseHome(details.get(), showcase.countsByCategory(details.get().userId())));
+        }
+    }
+
     private void viewShowcaseItems(CallbackContext context) {
         Optional<Long> userId = parseLong(context.arg(1));
         Optional<ShowcaseCategory> category = ShowcaseCategory.fromKey(context.arg(2));
@@ -160,27 +181,9 @@ class BrowseCallbackHandler extends CallbackHandler {
             return;
         }
         int page = parseInt(context.arg(3)).orElse(0);
-        Page<ShowcaseItem> items = showcase.page(userId.get(), category.get(), page, SHOWCASE_PAGE_SIZE);
-        if (items.isEmpty()) {
+        if (!showcaseSender.sendPage(context.chatId(), userId.get(), category.get(), page)) {
             withProvider(context, details ->
                     BrowseScreens.showcaseHome(details, showcase.countsByCategory(details.userId())));
-            return;
-        }
-        items.forEach(item -> sendItem(context.chatId(), item));
-        messenger.send(context.chatId(), BrowseScreens.showcasePage(
-                userId.get(), category.get(), page, SHOWCASE_PAGE_SIZE, items.getTotalElements()));
-    }
-
-    /** One broken file must not stop the rest of the page from being sent. */
-    private void sendItem(long chatId, ShowcaseItem item) {
-        try {
-            telegram.sendMedia(switch (item.getMediaType()) {
-                case PHOTO -> SendMediaRequest.photo(chatId, item.getFileId(), item.getCaption(), null);
-                case VIDEO -> SendMediaRequest.video(chatId, item.getFileId(), item.getCaption(), null);
-                case DOCUMENT -> SendMediaRequest.document(chatId, item.getFileId(), item.getCaption(), null);
-            });
-        } catch (TelegramApiException e) {
-            log.warn("Could not send showcase item {}: {}", item.getId(), e.getMessage());
         }
     }
 

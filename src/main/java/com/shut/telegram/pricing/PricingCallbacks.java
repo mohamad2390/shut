@@ -10,8 +10,15 @@ final class PricingCallbacks {
     static final String MANAGE = PREFIX + ":manage";
     static final String CANCEL = PREFIX + ":cancel";
     static final String EDIT = PREFIX + ":edit";
+    /** Skips the optional name of a price. */
+    static final String SKIP_NAME = PREFIX + ":skip";
 
     private PricingCallbacks() {
+    }
+
+    /** The member picked a service from the list. */
+    static String service(long serviceId) {
+        return PREFIX + ":svc:" + serviceId;
     }
 
     static String unit(PricingUnit unit) {

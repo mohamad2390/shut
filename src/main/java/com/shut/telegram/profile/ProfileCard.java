@@ -16,6 +16,11 @@ public final class ProfileCard {
     }
 
     public static String text(ProfessionalProfileResponse profile, String fallbackName) {
+        return text(profile, fallbackName, List.of());
+    }
+
+    /** {@code gear} is the member's listed equipment, one short line each; it goes before their free-text description. */
+    public static String text(ProfessionalProfileResponse profile, String fallbackName, List<String> gear) {
         List<String> lines = new ArrayList<>();
         lines.add("👤 " + (profile.displayName() != null ? profile.displayName() : fallbackName));
         if (profile.headline() != null) {
@@ -30,6 +35,10 @@ public final class ProfileCard {
         addJoined(lines, "مهارت‌ها", profile.skills());
         addJoined(lines, "شهرهای فعالیت", profile.serviceCities());
         addJoined(lines, "همکاری‌ها", profile.collaborators());
+        if (!gear.isEmpty()) {
+            lines.add("تجهیزات:");
+            gear.forEach(item -> lines.add("• " + item));
+        }
         if (profile.equipmentDescription() != null) {
             lines.add("تجهیزات: " + profile.equipmentDescription());
         }

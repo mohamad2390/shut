@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
 
-/** A widget message the bot sent, and which member's prices or calendar it shows. */
+/** A widget message the bot sent, and which member's prices or calendar it shows (no member for the ranked list). */
 @Entity
 @Table(name = "widget_messages")
 public class WidgetMessage {
@@ -26,12 +26,16 @@ public class WidgetMessage {
     @Column(name = "message_id", nullable = false, updatable = false)
     private long messageId;
 
-    @Column(name = "provider_id", nullable = false, updatable = false)
+    @Column(name = "provider_id", updatable = false)
     private Long providerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false, length = 16)
     private WidgetKind kind;
+
+    /** What the members widget was asked to search for; null for everything else. */
+    @Column(length = 200, updatable = false)
+    private String query;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -40,6 +44,11 @@ public class WidgetMessage {
     }
 
     public WidgetMessage(long chatId, long messageId, Long providerId, WidgetKind kind) {
+        this(chatId, messageId, providerId, kind, null);
+    }
+
+    public WidgetMessage(long chatId, long messageId, Long providerId, WidgetKind kind, String query) {
+        this.query = query;
         this.chatId = chatId;
         this.messageId = messageId;
         this.providerId = providerId;
@@ -51,4 +60,5 @@ public class WidgetMessage {
     public long getMessageId() { return messageId; }
     public Long getProviderId() { return providerId; }
     public WidgetKind getKind() { return kind; }
+    public String getQuery() { return query; }
 }

@@ -1,6 +1,8 @@
 package com.shut.telegram.profile;
 
+import com.shut.common.text.PersianDigits;
 import com.shut.profile.dto.ProfessionalProfileRequest;
+import com.shut.profile.dto.ProfessionalProfileResponse;
 import com.shut.profile.service.ProfessionalProfileService;
 import com.shut.telegram.account.TelegramAccountResolver;
 import com.shut.telegram.config.TelegramBotEnabled;
@@ -17,7 +19,9 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 
 /** Receives the text a user types after choosing a profile field to edit, and saves it. */
 @Component
@@ -68,8 +72,9 @@ class ProfileInputHandler implements UpdateHandler {
         }
 
         try {
-            ProfessionalProfileRequest request = field.toRequest(message.text());
-            profiles.saveOrUpdate(accounts.resolve(from).getId(), request);
+            Long userId = accounts.resolve(from).getId();
+            ProfessionalProfileRequest request = withTypedSkillsAdded(field, field.toRequest(message.text()), userId);
+            profiles.saveOrUpdate(userId, request);
         } catch (InvalidProfileInputException e) {
             messenger.sendText(chatId, e.getMessage() + "\n\nدوباره بفرست یا برای انصراف /cancel رو بزن.");
             return;
@@ -78,6 +83,26 @@ class ProfileInputHandler implements UpdateHandler {
         conversations.clear(from.id());
         messenger.sendText(chatId, "✅ " + field.label() + " ذخیره شد.");
         messenger.send(chatId, profileScreens.forUser(from));
+    }
+
+    /**
+     * Skills the member typed are added to the ones they picked, not instead of them; "-" still clears the list.
+     */
+    private ProfessionalProfileRequest withTypedSkillsAdded(ProfileField field, ProfessionalProfileRequest request,
+                                                            Long userId) {
+        if (field != ProfileField.SKILLS || request.skills() == null || request.skills().isEmpty()) {
+            return request;
+        }
+        Set<String> merged = new LinkedHashSet<>(profiles.findByUserId(userId)
+                .map(ProfessionalProfileResponse::skills).orElse(Set.of()));
+        merged.addAll(request.skills());
+        if (merged.size() > ProfileSkillScreens.MAX_SKILLS) {
+            throw new InvalidProfileInputException("با این‌ها بیشتر از " + PersianDigits.toPersian(ProfileSkillScreens.MAX_SKILLS)
+                    + " مهارت می‌شه. اول از دکمه‌ها چندتا رو بردار.");
+        }
+        ProfileDraft draft = new ProfileDraft();
+        draft.skills = merged;
+        return draft.toRequest();
     }
 
     /** The profile field this user was asked for, or empty if they are not in that step. */

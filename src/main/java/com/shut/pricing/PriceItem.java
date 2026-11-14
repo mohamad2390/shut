@@ -4,9 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
@@ -23,8 +26,14 @@ public class PriceItem {
     @Column(name = "user_id", nullable = false, updatable = false)
     private Long userId;
 
+    /** What the service is called. It is copied from the service when the price is added. */
     @Column(nullable = false, length = 100)
     private String title;
+
+    /** The service this price was added from, which decides its icon. Prices typed by hand have none. */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "service_type_id", updatable = false)
+    private ServiceType serviceType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -48,12 +57,28 @@ public class PriceItem {
         this.createdAt = OffsetDateTime.now();
     }
 
+    public PriceItem(Long userId, ServiceType serviceType, PricingUnit unit, long amount) {
+        this(userId, serviceType, null, unit, amount);
+    }
+
+    /** A price of a service under a name the member chose; without a name it is called after the service. */
+    public PriceItem(Long userId, ServiceType serviceType, String title, PricingUnit unit, long amount) {
+        this(userId, title == null || title.isBlank() ? serviceType.getName() : title.trim(), unit, amount);
+        this.serviceType = serviceType;
+    }
+
     public void changeAmount(long amount) { this.amount = amount; }
     public void changeUnit(PricingUnit unit) { this.unit = unit; }
 
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public String getTitle() { return title; }
+    public ServiceType getServiceType() { return serviceType; }
+
+    /** The icon of the service, or the default icon if the price has no service. */
+    public String getIcon() {
+        return serviceType == null ? PricingCatalog.DEFAULT_SERVICE_ICON : serviceType.getIcon();
+    }
     public PricingUnit getUnit() { return unit; }
     public long getAmount() { return amount; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

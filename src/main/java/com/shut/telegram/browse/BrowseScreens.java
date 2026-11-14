@@ -34,7 +34,7 @@ final class BrowseScreens {
 
     static Screen searchPrompt() {
         return new Screen(
-                "🔎 جستجوی اعضا\n\nاسم، شهر یا مهارتِ کسی که دنبالشی رو بفرست. مثلاً «تدوین» یا «شیراز» یا «پرتره».",
+                "🔎 جستجوی اعضا\n\nاسم، شهر، کشور یا مهارتِ کسی که دنبالشی رو بفرست. مثلاً «تدوین» یا «شیراز» یا «ترکیه». می‌تونی چند کلمه هم بنویسی.",
                 new KeyboardBuilder()
                         .row(InlineKeyboardButton.callback("👥 همه‌ی اعضا", BrowseCallbacks.ALL))
                         .row(InlineKeyboardButton.callback("🏠 منوی اصلی", MenuCallbacks.HOME))
@@ -71,7 +71,13 @@ final class BrowseScreens {
     }
 
     /** The member's profile with buttons for their showcase, calendar, prices and a way to message them. */
-    static Screen provider(ProviderDetails details, RatingSummary rating) {
+    static Screen provider(ProviderDetails details, RatingSummary rating, List<String> gear) {
+        return provider(details, rating, gear, InlineKeyboardButton.callback("↩️ نتایج", BrowseCallbacks.BACK_TO_RESULTS));
+    }
+
+    /** As above, with the button at the bottom chosen by the caller: results when browsing, the menu from a link. */
+    static Screen provider(ProviderDetails details, RatingSummary rating, List<String> gear,
+                           InlineKeyboardButton bottomButton) {
         long userId = details.userId();
         KeyboardBuilder keyboard = new KeyboardBuilder()
                 .row(InlineKeyboardButton.callback("🖼 ویترین", BrowseCallbacks.showcase(userId)),
@@ -80,9 +86,9 @@ final class BrowseScreens {
                         InlineKeyboardButton.callback("⭐ نظرها", ReviewCallbacks.list(userId, 0)));
         String username = details.telegramUsername();
         TelegramLinks.messageButton(username).ifPresent(keyboard::row);
-        keyboard.row(InlineKeyboardButton.callback("↩️ نتایج", BrowseCallbacks.BACK_TO_RESULTS));
+        keyboard.row(bottomButton);
 
-        String text = ProfileCard.text(details.profile(), NO_NAME) + "\n\nامتیاز: " + ReviewScreens.summaryLine(rating);
+        String text = ProfileCard.text(details.profile(), NO_NAME, gear) + "\n\nامتیاز: " + ReviewScreens.summaryLine(rating);
         if (username == null) {
             text += "\n\nاین عضو نام کاربری تلگرام نداره، برای همین دکمه‌ی پیام نمایش داده نمی‌شه.";
         }
@@ -152,7 +158,7 @@ final class BrowseScreens {
             return new Screen("💰 قیمت‌های " + name(details) + "\n\nهنوز قیمتی ثبت نکرده.", keyboard.build());
         }
         StringBuilder text = new StringBuilder("💰 قیمت‌های " + name(details) + "\n");
-        items.forEach(item -> text.append("\n• ").append(PriceText.describe(item)));
+        items.forEach(item -> text.append("\n• ").append(PriceText.line(item)));
         text.append("\n\nقیمت‌ها به تومان هستن.");
         return new Screen(text.toString(), keyboard.build());
     }

@@ -1,5 +1,6 @@
 package com.shut.telegram.client;
 
+import com.shut.telegram.model.BotCommand;
 import com.shut.telegram.model.ChatMember;
 import com.shut.telegram.model.EditMessageReplyMarkupRequest;
 import com.shut.telegram.model.EditMessageTextRequest;
@@ -47,6 +48,12 @@ public interface TelegramApiClient {
     long copyMessage(String toChatId, long fromChatId, long messageId);
 
     void deleteMessage(String chatId, long messageId);
+
+    /** Deletes up to 100 messages; the ones that are too old or already gone are skipped. */
+    void deleteMessages(String chatId, List<Long> messageIds);
+
+    /** Sets the menu that opens from the button next to the attach icon in the chat. */
+    void setMyCommands(List<BotCommand> commands);
 
     /** Stops the loading spinner on the button the user pressed. */
     void answerCallbackQuery(String callbackQueryId);

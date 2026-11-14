@@ -6,9 +6,10 @@ import com.shut.profile.entity.ProfessionalProfile;
 import com.shut.profile.exception.ProfessionalProfileNotFoundException;
 import com.shut.profile.repository.ProfessionalProfileRepository;
 import com.shut.user.entity.User;
-import com.shut.user.entity.UserRole;
+import com.shut.user.entity.RoleCodes;
 import com.shut.user.exception.UserNotFoundException;
 import com.shut.user.repository.UserRepository;
+import com.shut.user.service.RoleService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +23,13 @@ public class ProfessionalProfileService {
 
     private final ProfessionalProfileRepository profileRepository;
     private final UserRepository userRepository;
+    private final RoleService roleService;
 
-    public ProfessionalProfileService(ProfessionalProfileRepository profileRepository, UserRepository userRepository) {
+    public ProfessionalProfileService(ProfessionalProfileRepository profileRepository, UserRepository userRepository,
+                                      RoleService roleService) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
+        this.roleService = roleService;
     }
 
     @Transactional(readOnly = true)
@@ -60,7 +64,7 @@ public class ProfessionalProfileService {
         if (request.serviceCities() != null) profile.setServiceCities(cleanSet(request.serviceCities()));
         if (request.collaborators() != null) profile.setCollaborators(cleanSet(request.collaborators()));
 
-        user.addRole(UserRole.PROVIDER);
+        roleService.grant(user, RoleCodes.PROVIDER);
         ProfessionalProfile saved = profileRepository.save(profile);
         return ProfessionalProfileResponse.from(saved);
     }

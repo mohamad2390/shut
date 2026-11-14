@@ -1,5 +1,6 @@
 package com.shut.telegram.profile;
 
+import com.shut.equipment.EquipmentService;
 import com.shut.profile.service.ProfessionalProfileService;
 import com.shut.telegram.account.TelegramAccountResolver;
 import com.shut.telegram.config.TelegramBotEnabled;
@@ -15,14 +16,18 @@ public class ProfileScreenProvider {
 
     private final TelegramAccountResolver accounts;
     private final ProfessionalProfileService profiles;
+    private final EquipmentService equipment;
 
-    ProfileScreenProvider(TelegramAccountResolver accounts, ProfessionalProfileService profiles) {
+    ProfileScreenProvider(TelegramAccountResolver accounts, ProfessionalProfileService profiles,
+                          EquipmentService equipment) {
         this.accounts = accounts;
         this.profiles = profiles;
+        this.equipment = equipment;
     }
 
     public Screen forUser(TelegramUser from) {
         User user = accounts.resolve(from);
-        return ProfileScreen.build(profiles.findByUserId(user.getId()).orElse(null), from);
+        return ProfileScreen.build(profiles.findByUserId(user.getId()).orElse(null), from,
+                equipment.lines(user.getId()));
     }
 }

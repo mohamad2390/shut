@@ -1,10 +1,11 @@
 package com.shut.user.dto;
 
 import com.shut.user.entity.User;
-import com.shut.user.entity.UserRole;
+import com.shut.user.entity.Role;
 
 import java.time.OffsetDateTime;
 import java.util.Set;
+import java.util.TreeSet;
 
 public record UserResponse(
         Long id,
@@ -13,7 +14,7 @@ public record UserResponse(
         String firstName,
         String lastName,
         String phoneNumber,
-        Set<UserRole> roles,
+        Set<String> roles,
         boolean active,
         boolean verified,
         OffsetDateTime createdAt,
@@ -23,7 +24,7 @@ public record UserResponse(
         return new UserResponse(
                 user.getId(), user.getTelegramId(), user.getTelegramUsername(),
                 user.getFirstName(), user.getLastName(), user.getPhoneNumber(),
-                user.getRoles(), user.isActive(), user.isVerified(),
+                new TreeSet<>(user.getRoles().stream().map(Role::getCode).toList()), user.isActive(), user.isVerified(),
                 user.getCreatedAt(), user.getUpdatedAt()
         );
     }

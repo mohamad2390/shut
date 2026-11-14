@@ -88,8 +88,18 @@ public class UpdatePoller implements SmartLifecycle {
     private void prepare() {
         TelegramUser me = telegram.getMe();
         telegram.deleteWebhook();
+        registerCommandMenu();
         prepared = true;
         log.info("Telegram bot @{} connected, polling for updates", me.username());
+    }
+
+    /** The menu next to the attach icon. A failure here must not stop the bot from working. */
+    private void registerCommandMenu() {
+        try {
+            telegram.setMyCommands(BotCommandMenu.COMMANDS);
+        } catch (RuntimeException e) {
+            log.warn("Could not set the bot's command menu: {}", e.getMessage());
+        }
     }
 
     private void pollOnce() {

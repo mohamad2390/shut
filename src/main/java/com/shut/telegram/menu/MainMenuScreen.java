@@ -2,11 +2,12 @@ package com.shut.telegram.menu;
 
 import com.shut.telegram.browse.BrowseCallbacks;
 import com.shut.telegram.messaging.KeyboardBuilder;
-import com.shut.telegram.project.ProjectCallbacks;
 import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.model.InlineKeyboardButton;
+import com.shut.telegram.project.ProjectCallbacks;
+import com.shut.telegram.venue.VenueCallbacks;
 
-/** The main menu: one button per section of the bot. */
+/** The main menu: my info, member search and tender projects. */
 public final class MainMenuScreen {
 
     private MainMenuScreen() {
@@ -16,12 +17,10 @@ public final class MainMenuScreen {
         return new Screen(
                 intro + "\n\nیکی از بخش‌ها رو انتخاب کن.",
                 new KeyboardBuilder()
-                        .row(InlineKeyboardButton.callback("🖼 ویترین", MenuCallbacks.SHOWCASE),
-                                InlineKeyboardButton.callback("📅 تقویم", MenuCallbacks.CALENDAR))
-                        .row(InlineKeyboardButton.callback("💰 قیمت‌ها", MenuCallbacks.PRICING),
-                                InlineKeyboardButton.callback("👤 پروفایل", MenuCallbacks.PROFILE))
-                        .row(InlineKeyboardButton.callback("🔎 جستجوی اعضا", BrowseCallbacks.START),
-                                InlineKeyboardButton.callback("📋 پروژه‌ها", ProjectCallbacks.HOME))
+                        .row(InlineKeyboardButton.callback("👤 اطلاعات من", MenuCallbacks.ME))
+                        .row(InlineKeyboardButton.callback("🔎 جستجوی متخصص", BrowseCallbacks.START))
+                        .row(InlineKeyboardButton.callback("📋 پروژه‌های مناقصه‌ای", ProjectCallbacks.HOME))
+                        .row(InlineKeyboardButton.callback("📍 مکان‌های عکاسی", VenueCallbacks.HOME))
                         .build());
     }
 }

@@ -29,11 +29,11 @@ public class User {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 30)
-    private Set<UserRole> roles = new LinkedHashSet<>();
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Set<Role> roles = new LinkedHashSet<>();
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
@@ -54,7 +54,6 @@ public class User {
     public User(Long telegramId, String firstName) {
         this.telegramId = telegramId;
         this.firstName = firstName;
-        this.roles.add(UserRole.CUSTOMER);
         this.active = true;
         this.verified = false;
     }
@@ -115,20 +114,30 @@ public class User {
         this.phoneNumber = phoneNumber;
     }
 
-    public Set<UserRole> getRoles() {
+    public Set<Role> getRoles() {
         return Set.copyOf(roles);
     }
 
-    public void addRole(UserRole role) {
+    public void addRole(Role role) {
         if (role != null) {
             this.roles.add(role);
         }
     }
 
-    public void removeRole(UserRole role) {
-        if (role != null && role != UserRole.CUSTOMER) {
+    /** Default roles cannot be removed. */
+    public void removeRole(Role role) {
+        if (role != null && !role.isDefaultRole()) {
             this.roles.remove(role);
         }
+    }
+
+    public boolean hasRole(String code) {
+        return roles.stream().anyMatch(role -> role.getCode().equals(code));
+    }
+
+    /** Whether this account is a specialist. */
+    public boolean isProvider() {
+        return hasRole(RoleCodes.PROVIDER);
     }
 
     public boolean isActive() {

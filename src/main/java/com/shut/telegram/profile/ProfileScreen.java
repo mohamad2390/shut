@@ -1,6 +1,7 @@
 package com.shut.telegram.profile;
 
 import com.shut.profile.dto.ProfessionalProfileResponse;
+import com.shut.telegram.equipment.EquipmentCallbacks;
 import com.shut.telegram.menu.MenuCallbacks;
 import com.shut.telegram.messaging.KeyboardBuilder;
 import com.shut.telegram.messaging.Screen;
@@ -22,8 +23,8 @@ final class ProfileScreen {
     }
 
     /** {@code profile} is null when the user has not saved anything yet. */
-    static Screen build(ProfessionalProfileResponse profile, TelegramUser from) {
-        return new Screen(profile == null ? emptyText(from) : ProfileCard.text(profile, fallbackName(from)), keyboard());
+    static Screen build(ProfessionalProfileResponse profile, TelegramUser from, List<String> gear) {
+        return new Screen(profile == null ? emptyText(from) : ProfileCard.text(profile, fallbackName(from), gear), keyboard());
     }
 
     private static String emptyText(TelegramUser from) {
@@ -39,9 +40,17 @@ final class ProfileScreen {
         return value == null ? "" : value;
     }
 
+    /** Equipment is picked from the reference list on its own pages, not typed as text. */
+    private static InlineKeyboardButton editButton(ProfileField field) {
+        if (field == ProfileField.EQUIPMENT) {
+            return InlineKeyboardButton.callback("🎒 " + field.label(), EquipmentCallbacks.HOME);
+        }
+        return InlineKeyboardButton.callback("✏️ " + field.label(), ProfileCallbacks.edit(field));
+    }
+
     private static InlineKeyboardMarkup keyboard() {
         List<InlineKeyboardButton> editButtons = Arrays.stream(ProfileField.values())
-                .map(field -> InlineKeyboardButton.callback("✏️ " + field.label(), ProfileCallbacks.edit(field)))
+                .map(ProfileScreen::editButton)
                 .toList();
         return new KeyboardBuilder()
                 .grid(editButtons, 2)

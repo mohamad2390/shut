@@ -5,6 +5,8 @@ import com.shut.profile.entity.ProfessionalProfile;
 import com.shut.profile.repository.ProfessionalProfileRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,12 +23,14 @@ public class ProviderSearchService {
     }
 
     /**
-     * Members matching the query by name, headline, city, skills or service cities, ordered by name.
-     * A blank query lists everyone. The searching user is never part of the result.
+     * Members where every word of the query is part of their name, headline, city, country, a skill or a service
+     * city, ordered by name. A blank query lists everyone. The searching user is never part of the result.
      */
     @Transactional(readOnly = true)
     public Page<ProviderSummary> search(String query, Long searcherUserId, int page, int size) {
-        return profiles.search(SearchPattern.of(query), searcherUserId, PageRequest.of(Math.max(0, page), size))
+        Specification<ProfessionalProfile> matching =
+                ProviderSearchSpecification.matching(SearchPattern.words(query), searcherUserId);
+        return profiles.findAll(matching, PageRequest.of(Math.max(0, page), size, Sort.by("displayName", "id")))
                 .map(profile -> new ProviderSummary(profile.getUser().getId(), profile.getDisplayName(),
                         profile.getHeadline(), profile.getBaseCity()));
     }

@@ -1,6 +1,7 @@
 package com.shut.telegram.widget;
 
 import com.shut.browse.ProviderDetails;
+import com.shut.pricing.PricingCatalog;
 import com.shut.pricing.PricingService;
 import com.shut.telegram.config.TelegramBotEnabled;
 import org.springframework.stereotype.Component;
@@ -13,9 +14,11 @@ class PriceWidgetAnswerer implements WidgetAnswerer {
     private static final String PAGE_PREFIX = "p:";
 
     private final PricingService pricing;
+    private final PricingCatalog catalog;
 
-    PriceWidgetAnswerer(PricingService pricing) {
+    PriceWidgetAnswerer(PricingService pricing, PricingCatalog catalog) {
         this.pricing = pricing;
+        this.catalog = catalog;
     }
 
     @Override
@@ -26,7 +29,7 @@ class PriceWidgetAnswerer implements WidgetAnswerer {
     @Override
     public String answer(ProviderDetails provider, String request) {
         return PriceWidgetState.page(PriceWidgetPresenter.heading(WidgetNames.of(provider)),
-                pricing.list(provider.userId()), requestedPage(request));
+                pricing.list(provider.userId()), catalog.unitIcons(), requestedPage(request));
     }
 
     /** The first page unless the widget asked for another one. */

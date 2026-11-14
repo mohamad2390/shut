@@ -3,6 +3,7 @@ package com.shut.telegram.widget;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shut.pricing.PriceItem;
+import com.shut.pricing.PricingCatalog;
 import com.shut.pricing.PricingUnit;
 
 import java.nio.charset.StandardCharsets;
@@ -13,7 +14,8 @@ import java.util.Map;
 
 /**
  * The state the price widget draws, as the JSON it expects:
- * {@code {"h": heading, "i": [[id, icon, name, price, unit, openable]...], "c": pages, "p": page}}.
+ * {@code {"h": heading, "i": [[id, icon, name, price, unit, openable, unitIcon]...], "c": pages, "p": page}}.
+ * The icon is the one of the service and the unit icon the one of the pricing unit; both come from the database.
  *
  * <p>Telegram caps a widget's state, and every answer to it, at 1024 bytes. Persian text takes two bytes per letter,
  * so prices are split into pages by how many bytes they take, not by a fixed count.
@@ -35,33 +37,34 @@ public final class PriceWidgetState {
     }
 
     /** How many pages the prices take. A member with no prices still has one (empty) page. */
-    public static int pageCount(String heading, List<PriceItem> items) {
-        return split(heading, items).size();
+    public static int pageCount(String heading, List<PriceItem> items, Map<PricingUnit, String> unitIcons) {
+        return split(heading, items, unitIcons).size();
     }
 
     /**
      * One page of prices. The widget counts pages from 1; a page outside the range is moved to the nearest one.
      *
-     * @param heading what the widget shows above the rows, for example "قیمت‌های علی"
+     * @param heading   what the widget shows above the rows, for example "قیمت‌های علی"
+     * @param unitIcons the icon of every pricing unit
      */
-    public static String page(String heading, List<PriceItem> items, int page) {
-        List<List<PriceItem>> pages = split(heading, items);
+    public static String page(String heading, List<PriceItem> items, Map<PricingUnit, String> unitIcons, int page) {
+        List<List<PriceItem>> pages = split(heading, items, unitIcons);
         int index = Math.max(1, Math.min(page, pages.size())) - 1;
-        return json(heading, pages.get(index), pages.size(), index + 1);
+        return json(heading, pages.get(index), unitIcons, pages.size(), index + 1);
     }
 
     /** A state with a heading and no rows; the widget says nothing is listed. */
     public static String empty(String heading) {
-        return json(heading, List.of(), 1, 1);
+        return json(heading, List.of(), Map.of(), 1, 1);
     }
 
-    private static List<List<PriceItem>> split(String heading, List<PriceItem> items) {
-        int budget = MAX_BYTES - bytes(json(heading, List.of(), 99, 99)) - 16;
+    private static List<List<PriceItem>> split(String heading, List<PriceItem> items, Map<PricingUnit, String> unitIcons) {
+        int budget = MAX_BYTES - bytes(json(heading, List.of(), Map.of(), 99, 99)) - 16;
         List<List<PriceItem>> pages = new ArrayList<>();
         List<PriceItem> current = new ArrayList<>();
         int used = 0;
         for (PriceItem item : items) {
-            int size = bytes(row(item)) + 1;
+            int size = bytes(row(item, unitIcons)) + 1;
             boolean full = used + size > budget || current.size() >= MAX_ITEMS_PER_PAGE;
             if (full && !current.isEmpty()) {
                 pages.add(current);
@@ -75,9 +78,10 @@ public final class PriceWidgetState {
         return pages;
     }
 
-    private static String json(String heading, List<PriceItem> items, int pages, int page) {
+    private static String json(String heading, List<PriceItem> items, Map<PricingUnit, String> unitIcons,
+                               int pages, int page) {
         List<Object> rows = new ArrayList<>();
-        items.forEach(item -> rows.add(row(item)));
+        items.forEach(item -> rows.add(row(item, unitIcons)));
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("h", shorten(heading, MAX_HEADING_LENGTH));
         state.put("i", rows);
@@ -86,10 +90,11 @@ public final class PriceWidgetState {
         return write(state);
     }
 
-    /** A row is {@code [id, icon, name, price, unit, openable]}; prices are not openable. */
-    private static List<Object> row(PriceItem item) {
-        return List.of(item.getId(), icon(item.getUnit()), shorten(item.getTitle(), MAX_TITLE_LENGTH),
-                item.getAmount(), unit(item.getUnit()), 0);
+    /** A row is {@code [id, icon, name, price, unit, openable, unitIcon]}; prices are not openable. */
+    private static List<Object> row(PriceItem item, Map<PricingUnit, String> unitIcons) {
+        return List.of(item.getId(), item.getIcon(), shorten(item.getTitle(), MAX_TITLE_LENGTH),
+                item.getAmount(), unit(item.getUnit()), 0,
+                unitIcons.getOrDefault(item.getUnit(), PricingCatalog.DEFAULT_UNIT_ICON));
     }
 
     /** The widget writes "هر" before this, so it is the bare unit: "ساعت", not "هر ساعت". */
@@ -100,16 +105,6 @@ public final class PriceWidgetState {
             case PHOTO -> "عکس";
             case VIDEO_MINUTE -> "دقیقه ویدیو";
             case PROJECT -> FIXED_UNIT;
-        };
-    }
-
-    static String icon(PricingUnit unit) {
-        return switch (unit) {
-            case HOUR -> "⏱";
-            case DAY -> "📅";
-            case PHOTO -> "📷";
-            case VIDEO_MINUTE -> "🎬";
-            case PROJECT -> "📦";
         };
     }
 

@@ -86,4 +86,63 @@ class WidgetDeliveryTest {
         verify(widgets, never()).delete(any(WidgetMessage.class));
         verify(widgets, never()).save(any());
     }
+
+    @Test
+    void aSharedWidgetIsSavedWithoutAMemberAndReplacesTheEarlierSharedOne() {
+        WidgetMessage old = new WidgetMessage(CHAT, 41L, null, WidgetKind.MEMBERS);
+        when(widgets.findByChatIdAndProviderIdIsNullAndKind(CHAT, WidgetKind.MEMBERS)).thenReturn(List.of(old));
+        when(telegram.sendWidget(any())).thenReturn(99L);
+
+        assertThat(delivery.replaceShared(CHAT, WidgetKind.MEMBERS, "<html>", "{}")).isTrue();
+
+        ArgumentCaptor<WidgetMessage> saved = ArgumentCaptor.forClass(WidgetMessage.class);
+        verify(widgets).save(saved.capture());
+        assertThat(saved.getValue().getProviderId()).isNull();
+        assertThat(saved.getValue().getKind()).isEqualTo(WidgetKind.MEMBERS);
+        verify(telegram).deleteMessage(Long.toString(CHAT), 41L);
+        verify(widgets).delete(old);
+    }
+
+    private static WidgetMessage widget(long messageId, long provider, WidgetKind kind) {
+        return new WidgetMessage(CHAT, messageId, provider, kind);
+    }
+
+    @Test
+    void sendingAnOptionRemovesTheOtherOptionsButNotItself() {
+        when(telegram.sendWidget(any())).thenReturn(99L);
+        WidgetMessage prices = widget(31L, 8L, WidgetKind.PRICES);
+        WidgetMessage showcase = widget(32L, 7L, WidgetKind.SHOWCASE);
+        WidgetMessage justSent = widget(99L, 7L, WidgetKind.CALENDAR);
+        when(widgets.findByChatIdAndKindIn(CHAT, WidgetKind.CALENDAR.replaces()))
+                .thenReturn(List.of(prices, showcase, justSent));
+
+        delivery.replace(CHAT, PROVIDER, WidgetKind.CALENDAR, "<html>", "{}");
+
+        verify(telegram).deleteMessage(Long.toString(CHAT), 31L);
+        verify(telegram).deleteMessage(Long.toString(CHAT), 32L);
+        verify(telegram, never()).deleteMessage(Long.toString(CHAT), 99L);
+    }
+
+    @Test
+    void anOptionDoesNotRemoveAMenu() {
+        assertThat(WidgetKind.CALENDAR.replaces()).doesNotContain(WidgetKind.PROVIDER_MENU, WidgetKind.MEMBERS);
+        assertThat(WidgetKind.REVIEWS.replaces()).containsExactlyInAnyOrder(
+                WidgetKind.PROFILE, WidgetKind.CALENDAR, WidgetKind.PRICES, WidgetKind.SHOWCASE, WidgetKind.REVIEWS);
+    }
+
+    @Test
+    void aMenuReplacesEveryOptionAndEveryOtherMenuButNeverTheMembersList() {
+        assertThat(WidgetKind.PROVIDER_MENU.replaces()).containsExactlyInAnyOrder(WidgetKind.PROVIDER_MENU,
+                WidgetKind.PROFILE, WidgetKind.CALENDAR, WidgetKind.PRICES, WidgetKind.SHOWCASE, WidgetKind.REVIEWS);
+        assertThat(WidgetKind.MEMBERS.replaces()).isEmpty();
+    }
+
+    @Test
+    void theMembersListRemovesNothingElse() {
+        when(telegram.sendWidget(any())).thenReturn(99L);
+
+        delivery.replaceShared(CHAT, WidgetKind.MEMBERS, "<html>", "{}");
+
+        verify(widgets, never()).findByChatIdAndKindIn(anyLong(), any());
+    }
 }

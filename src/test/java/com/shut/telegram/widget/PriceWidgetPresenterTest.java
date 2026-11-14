@@ -1,6 +1,7 @@
 package com.shut.telegram.widget;
 
 import com.shut.pricing.PriceItem;
+import com.shut.pricing.PricingCatalog;
 import com.shut.pricing.PricingUnit;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,7 +23,8 @@ class PriceWidgetPresenterTest {
     private static final long PROVIDER = 7L;
 
     private final WidgetDelivery delivery = mock(WidgetDelivery.class);
-    private final PriceWidgetPresenter presenter = new PriceWidgetPresenter(delivery, new WidgetHtml());
+    private final PricingCatalog catalog = mock(PricingCatalog.class);
+    private final PriceWidgetPresenter presenter = new PriceWidgetPresenter(delivery, new WidgetHtml(), catalog);
 
     private static List<PriceItem> items() {
         PriceItem item = new PriceItem(PROVIDER, "عکاسی", PricingUnit.HOUR, 1_000_000);
@@ -32,6 +34,7 @@ class PriceWidgetPresenterTest {
 
     @Test
     void sendsThePriceWidgetWithTheFirstPage() {
+        when(catalog.unitIcons()).thenReturn(java.util.Map.of(com.shut.pricing.PricingUnit.HOUR, "⏱"));
         when(delivery.replace(anyLong(), anyLong(), any(), any(), any())).thenReturn(true);
 
         assertThat(presenter.show(CHAT, PROVIDER, "علی", items())).isTrue();

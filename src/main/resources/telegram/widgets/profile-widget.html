@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<style>
+:root{--ink:#4b3f63;--hint:#8d82a6;--chip:#fff;--chip-ink:#6a4cc0;--card:#f1e9ff;--edge:#d6c8f4;--bg:#f6f0ff}
+@media (prefers-color-scheme:dark){:root{--ink:#f1ecfb;--hint:#b6abd0;--chip:#3b3260;--chip-ink:#dccdff;--card:#3d3668;--edge:#2e2850;--bg:#272244}}
+*{box-sizing:border-box}
+body{margin:0;padding:0;color:var(--ink);background:var(--bg)}
+.w{padding:14px 12px 12px}
+.c{padding:14px 16px;border-radius:18px;background:var(--card);box-shadow:0 2px 0 var(--edge)}
+.h{display:flex;direction:ltr;align-items:center;justify-content:space-between;gap:10px}
+.h h3{flex:1;margin:0;direction:rtl;text-align:right;font-size:1.15em}
+.p{flex:none;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--chip-ink);font-size:.88em;font-weight:bold;white-space:nowrap}
+.p.z{color:var(--hint);font-weight:normal}
+.t{margin:6px 0 0;color:var(--hint);font-size:.92em}
+.r{margin:10px 0 0;font-size:.95em}
+.k{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0}
+.k span{padding:3px 10px;border-radius:999px;background:var(--chip);color:var(--chip-ink);font-size:.85em}
+.k.g span{background:transparent;border:1px solid var(--edge);color:var(--ink)}
+.q{margin:12px 0 0;color:var(--hint);font-size:.85em}
+.b{margin:12px 0 0;line-height:1.7;font-size:.92em}
+.e{text-align:center;color:var(--hint);padding:20px 0}
+</style>
+</head>
+<body>
+<div class="w" id="m"></div>
+<script>
+const W=window.TelegramWidget,M=document.getElementById('m');
+let S;
+const fa=n=>Number(n).toLocaleString('fa-IR');
+const fs=n=>(n/10).toLocaleString('fa-IR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const P=s=>{try{return JSON.parse(s)}catch(e){return null}};
+function h(t,c,x,p){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;if(p)p.appendChild(e);return e}
+function draw(){
+ M.textContent='';
+ if(!S){h('p','e','در حال بارگذاری…',M);return}
+ const c=h('div','c',null,M);
+ const t=h('div','h',null,c);
+ h('span',S.r?'p':'p z',S.r?'⭐ '+fs(S.r)+' ('+fa(S.n)+')':'بدون امتیاز',t);
+ h('h3','',S.h,t);
+ if(S.t)h('p','t',S.t,c);
+ if(S.l)h('p','r','📍 '+S.l,c);
+ if(S.y)h('p','r','🎞 '+fa(S.y)+' سال سابقه',c);
+ if(S.u)h('p','r','✈️ @'+S.u,c);
+ if(S.g)h('p','r','📷 '+S.g,c);
+ if(S.k&&S.k.length){const k=h('div','k',null,c);S.k.forEach(x=>h('span','',x,k))}
+ if(S.e&&S.e.length){h('p','q','🎒 تجهیزات'+(S.m?' (+'+fa(S.m)+' مورد دیگر)':''),c);const g=h('div','k g',null,c);S.e.forEach(x=>h('span','',x,g))}
+ if(S.b)h('p','b',S.b,c)
+}
+if(W){
+ W.onEvent('chatDataChanged',()=>{const s=P(W.chatData);if(s){S=s;draw()}});
+ S=P(W.chatData);draw();
+ if(!S)W.request('i').then(a=>{const s=a.result&&P(a.result);if(s){S=s;draw()}},()=>{});
+ W.ready()
+}else draw();
+</script>
+</body>
+</html>

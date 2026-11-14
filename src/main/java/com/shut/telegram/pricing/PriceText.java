@@ -9,6 +9,11 @@ public final class PriceText {
     private PriceText() {
     }
 
+    /** The line the price lists show: the icon of the service, then the description. */
+    public static String line(PriceItem item) {
+        return item.getIcon() + " " + describe(item);
+    }
+
     public static String describe(PriceItem item) {
         return item.getTitle() + ": " + PersianDigits.toPersianGrouped(item.getAmount())
                 + " تومان، " + item.getUnit().phrase();

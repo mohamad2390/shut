@@ -24,6 +24,41 @@ class WidgetLimitsTest {
     }
 
     @Test
+    void theMembersWidgetIsSmallEnoughForTelegram() throws Exception {
+        String html = new ClassPathResource(WidgetHtml.MEMBERS_RESOURCE).getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(WidgetLimits.problemWith(html)).isNull();
+    }
+
+    @Test
+    void theProviderMenuWidgetIsSmallEnoughForTelegram() throws Exception {
+        String html = new ClassPathResource(WidgetHtml.MENU_RESOURCE).getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(WidgetLimits.problemWith(html)).isNull();
+    }
+
+    @Test
+    void theProfileWidgetIsSmallEnoughForTelegram() throws Exception {
+        String html = new ClassPathResource(WidgetHtml.PROFILE_RESOURCE).getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(WidgetLimits.problemWith(html)).isNull();
+    }
+
+    @Test
+    void theShowcaseWidgetIsSmallEnoughForTelegram() throws Exception {
+        String html = new ClassPathResource(WidgetHtml.SHOWCASE_RESOURCE).getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(WidgetLimits.problemWith(html)).isNull();
+    }
+
+    @Test
+    void theReviewsWidgetIsSmallEnoughForTelegram() throws Exception {
+        String html = new ClassPathResource(WidgetHtml.REVIEWS_RESOURCE).getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(WidgetLimits.problemWith(html)).isNull();
+    }
+
+    @Test
     void aPageWithANulCharacterIsRefused() {
         assertThat(WidgetLimits.problemWith("<p>a\u0000b</p>")).contains("NUL");
     }

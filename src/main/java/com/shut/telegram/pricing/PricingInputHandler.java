@@ -1,7 +1,9 @@
 package com.shut.telegram.pricing;
 
 import com.shut.pricing.PriceLimitReachedException;
+import com.shut.pricing.PricingCatalog;
 import com.shut.pricing.PricingService;
+import com.shut.pricing.ServiceType;
 import com.shut.pricing.PricingUnit;
 import com.shut.telegram.account.TelegramAccountResolver;
 import com.shut.telegram.config.TelegramBotEnabled;
@@ -19,9 +21,10 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
-/** Receives the text a user types while adding a service (its name, then its price) or changing a price. */
+/** Receives the price a user types while adding a service or changing a price. The service itself is picked from a list. */
 @Component
 @TelegramBotEnabled
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -38,16 +41,18 @@ class PricingInputHandler implements UpdateHandler {
     private final MembershipGate membershipGate;
     private final TelegramAccountResolver accounts;
     private final PricingService pricing;
+    private final PricingCatalog catalog;
     private final PricingScreenProvider screens;
     private final BotMessenger messenger;
 
     PricingInputHandler(ConversationService conversations, MembershipGate membershipGate,
                         TelegramAccountResolver accounts, PricingService pricing,
-                        PricingScreenProvider screens, BotMessenger messenger) {
+                        PricingCatalog catalog, PricingScreenProvider screens, BotMessenger messenger) {
         this.conversations = conversations;
         this.membershipGate = membershipGate;
         this.accounts = accounts;
         this.pricing = pricing;
+        this.catalog = catalog;
         this.screens = screens;
         this.messenger = messenger;
     }
@@ -80,9 +85,8 @@ class PricingInputHandler implements UpdateHandler {
         }
 
         switch (state.getStep()) {
-            case AWAITING_PRICE_TITLE -> receiveTitle(from, chatId, message.text());
-            case AWAITING_PRICE_UNIT -> messenger.send(chatId,
-                    PricingScreens.askUnit(state.getData().getOrDefault(PricingCallbackHandler.TITLE_KEY, "")));
+            case AWAITING_PRICE_TITLE -> receiveTitle(from, chatId, message.text(), state.getData());
+            case AWAITING_PRICE_UNIT -> remindUnit(from, chatId, state.getData());
             case AWAITING_PRICE_AMOUNT -> receiveAmount(from, chatId, message.text(), state.getData());
             case AWAITING_PRICE_EDIT_AMOUNT -> receiveNewAmount(from, chatId, message.text(), state.getData());
             default -> { }
@@ -112,22 +116,52 @@ class PricingInputHandler implements UpdateHandler {
         messenger.send(chatId, screens.home(from));
     }
 
-    private void receiveTitle(TelegramUser from, long chatId, String raw) {
-        String title = raw.trim();
-        if (title.length() > MAX_TITLE_LENGTH) {
-            messenger.sendText(chatId, "اسم خدمت خیلی بلنده. حداکثر ۱۰۰ حرف بفرست.");
+    /** The optional name of a price; an empty or too long one is asked for again. */
+    private void receiveTitle(TelegramUser from, long chatId, String raw, Map<String, String> data) {
+        Optional<ServiceType> service = chosenService(data);
+        if (service.isEmpty()) {
+            conversations.clear(from.id());
+            messenger.send(chatId, screens.home(from));
             return;
         }
-        conversations.begin(from.id(), ConversationStep.AWAITING_PRICE_UNIT,
-                Map.of(PricingCallbackHandler.TITLE_KEY, title));
-        messenger.send(chatId, PricingScreens.askUnit(title));
+        String title = raw.trim();
+        if (title.length() > MAX_TITLE_LENGTH) {
+            messenger.sendText(chatId, "اسم خیلی بلنده. حداکثر ۱۰۰ حرف بفرست یا «رد کردن» رو بزن.");
+            return;
+        }
+        Map<String, String> next = title.isEmpty()
+                ? Map.of(PricingCallbackHandler.SERVICE_KEY, data.get(PricingCallbackHandler.SERVICE_KEY))
+                : Map.of(PricingCallbackHandler.SERVICE_KEY, data.get(PricingCallbackHandler.SERVICE_KEY),
+                        PricingCallbackHandler.TITLE_KEY, title);
+        conversations.begin(from.id(), ConversationStep.AWAITING_PRICE_UNIT, next);
+        messenger.send(chatId, PricingScreens.askUnit(service.get(),
+                PricingCallbackHandler.displayName(service.get(), next), catalog.unitIcons()));
+    }
+
+    /** A text arrived where a button press was expected: show the unit buttons again. */
+    private void remindUnit(TelegramUser from, long chatId, Map<String, String> data) {
+        Optional<ServiceType> service = chosenService(data);
+        if (service.isEmpty()) {
+            conversations.clear(from.id());
+            messenger.send(chatId, screens.home(from));
+            return;
+        }
+        messenger.send(chatId, PricingScreens.askUnit(service.get(),
+                PricingCallbackHandler.displayName(service.get(), data), catalog.unitIcons()));
+    }
+
+    private Optional<ServiceType> chosenService(Map<String, String> data) {
+        return PricingCallbackHandler.parseId(data.getOrDefault(PricingCallbackHandler.SERVICE_KEY, ""))
+                .flatMap(catalog::service);
     }
 
     private void receiveAmount(TelegramUser from, long chatId, String raw, Map<String, String> data) {
-        String title = data.get(PricingCallbackHandler.TITLE_KEY);
+        Optional<ServiceType> service = chosenService(data);
         PricingUnit unit = PricingUnit.fromKey(data.getOrDefault(PricingCallbackHandler.UNIT_KEY, "")).orElse(null);
-        if (title == null || unit == null) {
+        if (service.isEmpty() || unit == null) {
             conversations.clear(from.id());
+            messenger.sendText(chatId, "این خدمت دیگه در دسترس نیست. دوباره از اول انتخابش کن.");
+            messenger.send(chatId, screens.home(from));
             return;
         }
 
@@ -140,7 +174,7 @@ class PricingInputHandler implements UpdateHandler {
         }
 
         try {
-            pricing.add(accounts.resolve(from).getId(), title, unit, amount);
+            pricing.add(accounts.resolve(from).getId(), service.get(), data.get(PricingCallbackHandler.TITLE_KEY), unit, amount);
             messenger.sendText(chatId, "✅ خدمت اضافه شد.");
         } catch (PriceLimitReachedException e) {
             messenger.sendText(chatId, "منوی قیمتت پره. اول یکی از خدمت‌ها رو حذف کن.");

@@ -14,4 +14,12 @@ interface WidgetAnswerer {
      * @param request  what the widget asked for, such as {@code "i"} or {@code "p:3"}
      */
     String answer(ProviderDetails provider, String request);
+
+    /**
+     * Handles a tap that opens something else in the chat, such as another widget. Returns true if the request was
+     * one of those, in which case the widget keeps what it shows and is answered with an empty state.
+     */
+    default boolean open(long chatId, ProviderDetails provider, String request) {
+        return false;
+    }
 }

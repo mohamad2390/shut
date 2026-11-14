@@ -54,7 +54,7 @@ function draw(){
   h('div','m',x[2],n);
   const s=h('div','s',null,n);
   if(x[3]!=null)h('span','p',fa(x[3])+' تومان',s);
-  if(x[4])h('small','',x[4]==='ثابت'?'قیمت ثابت':'هر '+x[4],s);
+  if(x[4])h('small','',(x[6]?x[6]+' ':'')+(x[4]==='ثابت'?'قیمت ثابت':'هر '+x[4]),s);
   if(o)h('span','a','‹',r)
  });
  if(S.t!=null){const t=h('div','t',null,M);h('span','','جمع کل',t);h('span','p',fa(S.t)+' تومان',t)}
