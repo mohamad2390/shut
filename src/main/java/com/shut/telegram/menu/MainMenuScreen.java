@@ -1,11 +1,13 @@
 package com.shut.telegram.menu;
 
 import com.shut.telegram.browse.BrowseCallbacks;
+import com.shut.telegram.business.BusinessCallbacks;
 import com.shut.telegram.market.MarketCallbacks;
 import com.shut.telegram.messaging.KeyboardBuilder;
 import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.model.InlineKeyboardButton;
 import com.shut.telegram.project.ProjectCallbacks;
+import com.shut.telegram.studio.StudioCallbacks;
 import com.shut.telegram.venue.VenueCallbacks;
 
 /** The main menu: my info, member search and tender projects. */
@@ -22,7 +24,9 @@ public final class MainMenuScreen {
                         .row(InlineKeyboardButton.callback("🔎 جستجوی متخصص", BrowseCallbacks.START))
                         .row(InlineKeyboardButton.callback("📋 پروژه‌های مناقصه‌ای", ProjectCallbacks.HOME))
                         .row(InlineKeyboardButton.callback("📍 مکان‌های عکاسی", VenueCallbacks.HOME))
+                        .row(InlineKeyboardButton.callback("🏢 استودیوها", StudioCallbacks.HOME))
                         .row(InlineKeyboardButton.callback("🛒 بازار تجهیزات", MarketCallbacks.HOME))
+                        .row(InlineKeyboardButton.callback("💼 کسب‌وکار من", BusinessCallbacks.HOME))
                         .build());
     }
 }

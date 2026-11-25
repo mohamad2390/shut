@@ -10,6 +10,10 @@ public final class VenueCallbacks {
     public static final String PREFIX = "venue";
     /** The venues section: browse, my venues, my booking requests. */
     public static final String HOME = PREFIX + ":home";
+    /** The owner's own venues, for the business menu. */
+    public static final String OWNER_HOME = VenueOwnerCallbacks.MINE;
+    /** Starts a new venue (asks for its name). */
+    public static final String OWNER_NEW = VenueOwnerCallbacks.NEW;
     static final String MY_BOOKINGS = PREFIX + ":mybook";
     static final String NOOP = PREFIX + ":noop";
 

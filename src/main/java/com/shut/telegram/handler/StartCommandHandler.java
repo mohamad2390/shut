@@ -5,7 +5,7 @@ import com.shut.telegram.config.TelegramBotEnabled;
 import com.shut.telegram.conversation.ConversationService;
 import com.shut.telegram.browse.ProviderPageOpener;
 import com.shut.telegram.membership.MembershipGate;
-import com.shut.telegram.menu.MainMenuScreen;
+import com.shut.telegram.menu.StartScreen;
 import com.shut.telegram.messaging.BotLinks;
 import com.shut.telegram.messaging.BotMessenger;
 import com.shut.telegram.model.Message;
@@ -45,6 +45,6 @@ class StartCommandHandler extends CommandHandler {
         if (BotLinks.profileIdIn(message.text()).stream().anyMatch(id -> pages.open(chatId, id))) {
             return;
         }
-        messenger.send(chatId, MainMenuScreen.build(BotMessages.welcome(from.firstName())));
+        messenger.send(chatId, StartScreen.build(BotMessages.welcome(from.firstName())));
     }
 }

@@ -38,6 +38,16 @@ public enum ConversationStep {
     AWAITING_BOOKING_TIME,
     /** The note sent with a venue booking request. */
     AWAITING_BOOKING_NOTE,
+    /** Registering a studio (one answer after another), editing one of its details, a service, the showcase, an invitee. */
+    AWAITING_STUDIO_WIZARD,
+    AWAITING_STUDIO_FIELD,
+    AWAITING_OFFERING,
+    AWAITING_STUDIO_MEDIA,
+    AWAITING_STUDIO_INVITEE,
+    /** The name, city and description of an equipment rental card. */
+    AWAITING_BUSINESS_NAME,
+    AWAITING_BUSINESS_CITY,
+    AWAITING_BUSINESS_DESCRIPTION,
     /** The title, then the price, of a new gear listing; its condition is picked with a button. */
     AWAITING_LISTING_TITLE,
     AWAITING_LISTING_PRICE,
