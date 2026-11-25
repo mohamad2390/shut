@@ -4,9 +4,11 @@ import com.shut.common.calendar.JalaliDate;
 import com.shut.common.calendar.JalaliMonth;
 import com.shut.common.text.PersianDigits;
 import com.shut.venue.Venue;
+import com.shut.venue.VenueBooking;
 import com.shut.venue.VenuePrice;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +23,15 @@ final class VenueTexts {
         JalaliDate jalali = JalaliDate.of(day);
         return PersianDigits.toPersian(jalali.day()) + " " + new JalaliMonth(jalali.year(), jalali.month()).name()
                 + " " + PersianDigits.toPersian(jalali.year());
+    }
+
+    /** "۹:۰۰ تا ۱۲:۰۰", or "تمام روز" for a booking without hours. */
+    static String hours(VenueBooking booking) {
+        return booking.isFullDay() ? "تمام روز" : clock(booking.getStartTime()) + " تا " + clock(booking.getEndTime());
+    }
+
+    static String clock(LocalTime time) {
+        return PersianDigits.toPersian(time.getHour()) + ":" + PersianDigits.toPersian(String.format("%02d", time.getMinute()));
     }
 
     /** One price as a line: "خصوصی: ۵۰٬۰۰۰٬۰۰۰ تومان، یک‌جا". */

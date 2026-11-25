@@ -32,6 +32,20 @@ public enum ConversationStep {
     AWAITING_VENUE_PRICE_AMOUNT,
     AWAITING_VENUE_PRICE_TITLE,
     AWAITING_VENUE_PHOTO,
+    /** The member was asked to share their phone number with the button under the text box. */
+    AWAITING_PHONE_CONTACT,
+    /** The hours of a venue booking request, unless it is for the whole day. */
+    AWAITING_BOOKING_TIME,
     /** The note sent with a venue booking request. */
-    AWAITING_BOOKING_NOTE
+    AWAITING_BOOKING_NOTE,
+    /** The title, then the price, of a new gear listing; its condition is picked with a button. */
+    AWAITING_LISTING_TITLE,
+    AWAITING_LISTING_PRICE,
+    AWAITING_LISTING_CONDITION,
+    /** The text of one listing detail the seller is editing. */
+    AWAITING_LISTING_FIELD,
+    AWAITING_LISTING_PHOTO,
+    /** The amount of an offer on a listing, then the note sent with it. */
+    AWAITING_OFFER_AMOUNT,
+    AWAITING_OFFER_NOTE
 }

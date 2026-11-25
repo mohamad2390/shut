@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ReceivedMediaTest {
 
     private static Message message(List<PhotoSize> photo, Video video, Document document) {
-        return new Message(1, null, null, null, null, photo, video, document, null);
+        return new Message(1, null, null, null, null, photo, video, document, null, null);
     }
 
     @Test

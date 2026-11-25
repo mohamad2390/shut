@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 /** A member's request to use a venue on one day. */
@@ -30,6 +31,13 @@ public class VenueBooking {
     @Column(name = "day_date", nullable = false, updatable = false)
     private LocalDate day;
 
+    /** When the booking starts, or null together with {@code endTime} for the whole day. */
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    @Column(name = "end_time")
+    private LocalTime endTime;
+
     @Column(length = 500)
     private String note;
 
@@ -43,10 +51,13 @@ public class VenueBooking {
     protected VenueBooking() {
     }
 
-    public VenueBooking(Long venueId, Long requesterId, LocalDate day, String note) {
+    public VenueBooking(Long venueId, Long requesterId, LocalDate day, LocalTime startTime, LocalTime endTime,
+                        String note) {
         this.venueId = venueId;
         this.requesterId = requesterId;
         this.day = day;
+        this.startTime = startTime;
+        this.endTime = endTime;
         this.note = note;
         this.createdAt = OffsetDateTime.now();
     }
@@ -55,7 +66,18 @@ public class VenueBooking {
     public Long getVenueId() { return venueId; }
     public Long getRequesterId() { return requesterId; }
     public LocalDate getDay() { return day; }
+    public LocalTime getStartTime() { return startTime; }
+    public LocalTime getEndTime() { return endTime; }
     public String getNote() { return note; }
+
+    public boolean isFullDay() {
+        return startTime == null || endTime == null;
+    }
+
+    public boolean sameSlotAs(LocalDate otherDay, LocalTime otherStart, LocalTime otherEnd) {
+        return day.equals(otherDay) && java.util.Objects.equals(startTime, otherStart)
+                && java.util.Objects.equals(endTime, otherEnd);
+    }
     public BookingStatus getStatus() { return status; }
     public void setStatus(BookingStatus status) { this.status = status; }
 }

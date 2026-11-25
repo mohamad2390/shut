@@ -187,7 +187,7 @@ class VenueOwnerCallbackHandler extends CallbackHandler {
         LocalDate today = dates.today();
         LocalDate last = dates.lastMarkableDay();
         return VenueCalendarScreen.month(venue.getName(), month, statuses,
-                "روی هر روز بزن تا وضعیتش عوض بشه: آزاد، پر، و دوباره نامشخص. فقط روزهای آزاد قابل رزرو هستن.",
+                "روی هر روز بزن تا وضعیتش عوض بشه: آزاد، پر، و دوباره نامشخص. «آزاد» یعنی قابل رزرو و محدودیتی روی تعداد درخواست‌ها نیست. «پر» یعنی دیگه درخواست نمی‌گیری؛ قبول کردن رزرو روز رو خودکار پر نمی‌کنه.",
                 date -> !date.isBefore(today) && !date.isAfter(last) ? VenueOwnerCallbacks.day(id, date) : null,
                 target -> VenueOwnerCallbacks.calendar(id, target),
                 dates.hasPreviousMonth(month), dates.hasNextMonth(month),

@@ -61,6 +61,12 @@ public class ShowcaseService {
         return repository.findByUserIdAndCategory(userId, category, PageRequest.of(page, size, NEWEST_FIRST));
     }
 
+    /** One item of the user's portfolio, if it exists. */
+    @Transactional(readOnly = true)
+    public Optional<ShowcaseItem> find(Long itemId, Long userId) {
+        return repository.findByIdAndUserId(itemId, userId);
+    }
+
     /** Deletes the item if it belongs to the user, and returns it so callers can clean up related data. */
     @Transactional
     public Optional<ShowcaseItem> deleteOwned(Long itemId, Long userId) {

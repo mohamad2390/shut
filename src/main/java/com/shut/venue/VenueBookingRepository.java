@@ -10,8 +10,8 @@ public interface VenueBookingRepository extends JpaRepository<VenueBooking, Long
 
     List<VenueBooking> findTop10ByRequesterIdOrderByIdDesc(Long requesterId);
 
-    boolean existsByVenueIdAndRequesterIdAndDayAndStatus(Long venueId, Long requesterId, java.time.LocalDate day,
-                                                         BookingStatus status);
+    List<VenueBooking> findByVenueIdAndRequesterIdAndDayAndStatus(Long venueId, Long requesterId,
+                                                                  java.time.LocalDate day, BookingStatus status);
 
     long countByVenueIdAndStatus(Long venueId, BookingStatus status);
 }

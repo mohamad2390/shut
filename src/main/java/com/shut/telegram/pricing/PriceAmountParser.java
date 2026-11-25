@@ -1,13 +1,14 @@
 package com.shut.telegram.pricing;
 
 import com.shut.common.text.PersianDigits;
+import com.shut.pricing.PricingService;
 
 import java.util.regex.Pattern;
 
 /** Reads a price typed by a user, accepting Persian digits and thousands separators. */
 public final class PriceAmountParser {
 
-    public static final long MAX_AMOUNT = 10_000_000_000L;
+    public static final long MAX_AMOUNT = PricingService.MAX_AMOUNT;
 
     private static final Pattern SEPARATORS = Pattern.compile("[,\\u066C\\u060C\\s]");
     private static final Pattern DIGITS = Pattern.compile("\\d{1,11}");

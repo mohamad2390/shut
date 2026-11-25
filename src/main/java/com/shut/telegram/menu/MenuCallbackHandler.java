@@ -10,6 +10,7 @@ import com.shut.telegram.calendar.CalendarScreenProvider;
 import com.shut.telegram.membership.MembershipGate;
 import com.shut.telegram.messaging.BotLinks;
 import com.shut.telegram.messaging.BotMessenger;
+import com.shut.telegram.phone.PhoneLinkPrompt;
 import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.pricing.PricingScreenProvider;
 import com.shut.telegram.profile.ProfileScreenProvider;
@@ -28,15 +29,17 @@ class MenuCallbackHandler extends CallbackHandler {
     private final PricingScreenProvider pricingScreens;
     private final CalendarScreenProvider calendarScreens;
     private final BotLinks links;
+    private final PhoneLinkPrompt phones;
 
     MenuCallbackHandler(TelegramApiClient telegram, MembershipGate membershipGate,
                         BotMessenger messenger, ProfileScreenProvider profileScreens,
                         ShowcaseScreenProvider showcaseScreens, PricingScreenProvider pricingScreens,
                         CalendarScreenProvider calendarScreens,
-                        TelegramAccountResolver accounts, BotLinks links) {
+                        TelegramAccountResolver accounts, BotLinks links, PhoneLinkPrompt phones) {
         super(telegram, membershipGate);
         this.accounts = accounts;
         this.links = links;
+        this.phones = phones;
         this.messenger = messenger;
         this.profileScreens = profileScreens;
         this.showcaseScreens = showcaseScreens;
@@ -51,6 +54,10 @@ class MenuCallbackHandler extends CallbackHandler {
 
     @Override
     protected void onCallback(CallbackContext context) {
+        if ("phone".equals(context.arg(0))) {
+            phones.ask(context.chatId(), context.user().id());
+            return;
+        }
         Screen screen = switch (context.arg(0)) {
             case "home" -> MainMenuScreen.build(BotMessages.MENU_INTRO);
             case "me" -> accounts.resolve(context.user()).isProvider()

@@ -31,4 +31,6 @@ public class UnitIcon {
     /** The unit this row is for, or empty if the row names a unit that does not exist (any more). */
     public Optional<PricingUnit> getUnit() { return PricingUnit.fromKey(unit); }
     public String getIcon() { return icon; }
+
+    public void setIcon(String icon) { this.icon = icon; }
 }

@@ -6,6 +6,7 @@ import com.shut.telegram.model.EditMessageReplyMarkupRequest;
 import com.shut.telegram.model.EditMessageTextRequest;
 import com.shut.telegram.model.SendMediaRequest;
 import com.shut.telegram.model.SendMessageRequest;
+import com.shut.telegram.model.SendReplyKeyboardRequest;
 import com.shut.telegram.model.SendWidgetRequest;
 import com.shut.telegram.model.TelegramUser;
 import com.shut.telegram.model.Update;
@@ -25,6 +26,9 @@ public interface TelegramApiClient {
     ChatMember getChatMember(String chatId, long userId);
 
     void sendMessage(SendMessageRequest request);
+
+    /** Sends a message that shows or removes the keyboard under the text box. */
+    void sendWithReplyKeyboard(SendReplyKeyboardRequest request);
 
     /** Replaces the text and keyboard of a message the bot sent earlier. */
     void editMessageText(EditMessageTextRequest request);

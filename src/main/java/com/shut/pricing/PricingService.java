@@ -12,6 +12,9 @@ public class PricingService {
 
     public static final int MAX_ITEMS = 20;
 
+    /** The highest price that can be set, in tomans. */
+    public static final long MAX_AMOUNT = 10_000_000_000L;
+
     private final PriceItemRepository repository;
 
     public PricingService(PriceItemRepository repository) {

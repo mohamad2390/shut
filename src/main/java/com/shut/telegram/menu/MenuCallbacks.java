@@ -11,6 +11,7 @@ public final class MenuCallbacks {
     public static final String SHOWCASE = PREFIX + ":showcase";
     public static final String CALENDAR = PREFIX + ":calendar";
     public static final String LINK = PREFIX + ":link";
+    public static final String PHONE = PREFIX + ":phone";
     public static final String PRICING = PREFIX + ":pricing";
 
     private MenuCallbacks() {

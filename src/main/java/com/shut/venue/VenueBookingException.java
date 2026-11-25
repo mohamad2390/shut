@@ -4,7 +4,7 @@ package com.shut.venue;
 public class VenueBookingException extends RuntimeException {
 
     /** Why the request was refused. */
-    public enum Reason { VENUE_NOT_AVAILABLE, OWN_VENUE, DAY_NOT_FREE, ALREADY_REQUESTED }
+    public enum Reason { VENUE_NOT_AVAILABLE, OWN_VENUE, DAY_NOT_FREE, ALREADY_REQUESTED, INVALID_TIME }
 
     private final Reason reason;
 

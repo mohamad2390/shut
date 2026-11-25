@@ -63,12 +63,25 @@ public class VenueCalendarService {
         return Optional.empty();
     }
 
-    /** Marks a day taken, for example when a booking is accepted. */
+    /**
+     * Sets the owner's day to the given status, or clears it when {@code status} is null.
+     *
+     * @throws IllegalArgumentException if the venue is not the owner's or the day cannot be marked
+     */
     @Transactional
-    public void markBusy(Long venueId, LocalDate day) {
-        days.findByVenueIdAndDay(venueId, day).ifPresentOrElse(
-                marked -> marked.setStatus(CalendarStatus.BUSY),
-                () -> days.save(new VenueCalendarDay(venueId, day, CalendarStatus.BUSY)));
+    public void setStatus(Long venueId, Long ownerId, LocalDate day, CalendarStatus status) {
+        if (venues.findByIdAndOwnerId(venueId, ownerId).isEmpty()) {
+            throw new IllegalArgumentException("Not the owner's venue: " + venueId);
+        }
+        checkMarkable(day);
+        Optional<VenueCalendarDay> existing = days.findByVenueIdAndDay(venueId, day);
+        if (status == null) {
+            existing.ifPresent(days::delete);
+        } else if (existing.isPresent()) {
+            existing.get().setStatus(status);
+        } else {
+            days.save(new VenueCalendarDay(venueId, day, status));
+        }
     }
 
     private void checkMarkable(LocalDate day) {

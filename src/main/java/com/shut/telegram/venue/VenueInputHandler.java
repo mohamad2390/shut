@@ -25,6 +25,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ import java.util.Set;
 class VenueInputHandler implements UpdateHandler {
 
     private static final int MAX_NAME_LENGTH = 100;
+    static final String START_KEY = "start";
+    static final String END_KEY = "end";
     private static final int MAX_NOTE_LENGTH = 500;
     private static final int MAX_PRICE_TITLE_LENGTH = 40;
     private static final Set<ConversationStep> STEPS = Set.of(
@@ -45,6 +48,7 @@ class VenueInputHandler implements UpdateHandler {
             ConversationStep.AWAITING_VENUE_FIELD,
             ConversationStep.AWAITING_VENUE_PRICE_AMOUNT,
             ConversationStep.AWAITING_VENUE_PRICE_TITLE,
+            ConversationStep.AWAITING_BOOKING_TIME,
             ConversationStep.AWAITING_BOOKING_NOTE);
 
     private final ConversationService conversations;
@@ -98,6 +102,7 @@ class VenueInputHandler implements UpdateHandler {
             case AWAITING_VENUE_FIELD -> receiveField(from, chatId, userId, message.text(), state.getData());
             case AWAITING_VENUE_PRICE_AMOUNT -> receivePriceAmount(from, chatId, message.text(), state.getData());
             case AWAITING_VENUE_PRICE_TITLE -> receivePriceTitle(from, chatId, userId, message.text(), state.getData());
+            case AWAITING_BOOKING_TIME -> receiveTime(from, chatId, message.text(), state.getData());
             case AWAITING_BOOKING_NOTE -> receiveNote(from, chatId, userId, message.text(), state.getData());
             default -> { }
         }
@@ -187,10 +192,34 @@ class VenueInputHandler implements UpdateHandler {
         messenger.send(chatId, VenueOwnerScreens.prices(venue.get(), venues.prices(venue.get().getId())));
     }
 
+    /** The hours typed for a booking; next comes the note. */
+    private void receiveTime(TelegramUser from, long chatId, String raw, Map<String, String> data) {
+        Optional<Venue> venue = VenueArgs.id(data.getOrDefault(VenueCallbackHandler.VENUE_KEY, "")).flatMap(venues::findListed);
+        Optional<LocalDate> day = VenueArgs.date(data.getOrDefault(VenueCallbackHandler.DAY_KEY, ""));
+        if (venue.isEmpty() || day.isEmpty()) {
+            conversations.clear(from.id());
+            messenger.send(chatId, VenueScreens.gone());
+            return;
+        }
+        Optional<VenueTimeRange> range = VenueTimeRange.parse(raw);
+        if (range.isEmpty()) {
+            messenger.sendText(chatId, "ساعت رو نفهمیدم. مثلاً «۹ تا ۱۲» یا «۱۴:۳۰ تا ۱۸» بفرست (شروع قبل از پایان)، یا /cancel رو بزن.");
+            return;
+        }
+        Map<String, String> next = new HashMap<>(data);
+        next.put(START_KEY, range.get().start().toString());
+        next.put(END_KEY, range.get().end().toString());
+        conversations.begin(from.id(), ConversationStep.AWAITING_BOOKING_NOTE, next);
+        String hours = VenueTexts.clock(range.get().start()) + " تا " + VenueTexts.clock(range.get().end());
+        messenger.send(chatId, VenueScreens.askNote(venue.get(), hours, day.get()));
+    }
+
     private void receiveNote(TelegramUser from, long chatId, Long userId, String raw, Map<String, String> data) {
         Optional<Long> venueId = VenueArgs.id(data.getOrDefault(VenueCallbackHandler.VENUE_KEY, ""));
         Optional<LocalDate> day = VenueArgs.date(data.getOrDefault(VenueCallbackHandler.DAY_KEY, ""));
         String note = raw.strip();
+        LocalTime start = VenueArgs.time(data.get(START_KEY)).orElse(null);
+        LocalTime end = VenueArgs.time(data.get(END_KEY)).orElse(null);
         if (venueId.isEmpty() || day.isEmpty()) {
             conversations.clear(from.id());
             messenger.send(chatId, VenueScreens.gone());
@@ -202,7 +231,7 @@ class VenueInputHandler implements UpdateHandler {
         }
         VenueBooking booking;
         try {
-            booking = bookings.request(venueId.get(), userId, day.get(), note.isEmpty() ? null : note);
+            booking = bookings.request(venueId.get(), userId, day.get(), start, end, note.isEmpty() ? null : note);
         } catch (VenueBookingException e) {
             conversations.clear(from.id());
             messenger.sendText(chatId, refusal(e.reason()));
@@ -222,7 +251,8 @@ class VenueInputHandler implements UpdateHandler {
             case VENUE_NOT_AVAILABLE -> "این مکان دیگه در دسترس نیست.";
             case OWN_VENUE -> "این مکان خودته؛ نمی‌تونی برای خودت درخواست بدی.";
             case DAY_NOT_FREE -> "این روز دیگه آزاد نیست. یک روز دیگه انتخاب کن.";
-            case ALREADY_REQUESTED -> "برای این روز قبلاً درخواست دادی و منتظر جواب هستی.";
+            case ALREADY_REQUESTED -> "برای همین ساعت‌ها قبلاً درخواست دادی و منتظر جواب هستی.";
+            case INVALID_TIME -> "ساعت‌ها معتبر نیست.";
         };
     }
 }

@@ -78,6 +78,15 @@ public class VenueService {
         });
     }
 
+    /** Switches the venue on or off, whoever owns it; for administrators. Empty if there is no such venue. */
+    @Transactional
+    public Optional<Venue> setActive(Long venueId, boolean active) {
+        return venues.findById(venueId).map(venue -> {
+            venue.setActive(active);
+            return venue;
+        });
+    }
+
     /** Deletes the venue with its photos, calendar and bookings. Returns its photos so their backups can be removed. */
     @Transactional
     public Optional<List<VenuePhoto>> delete(Long venueId, Long ownerId) {

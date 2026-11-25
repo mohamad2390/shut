@@ -21,7 +21,8 @@ public final class MyInfoScreen {
                         InlineKeyboardButton.callback("📅 تقویم", MenuCallbacks.CALENDAR))
                 .row(InlineKeyboardButton.callback("🖼 ویترین", MenuCallbacks.SHOWCASE),
                         InlineKeyboardButton.callback("💰 تعرفه‌ها", MenuCallbacks.PRICING))
-                .row(InlineKeyboardButton.callback("🔗 لینک پروفایل من", MenuCallbacks.LINK))
+                .row(InlineKeyboardButton.callback("🔗 لینک پروفایل من", MenuCallbacks.LINK),
+                        InlineKeyboardButton.callback("📱 شماره‌ی موبایل", MenuCallbacks.PHONE))
                 .row(InlineKeyboardButton.callback("🏠 منوی اصلی", MenuCallbacks.HOME))
                 .build());
     }
@@ -44,6 +45,7 @@ public final class MyInfoScreen {
     public static Screen forCustomer() {
         return new Screen(CUSTOMER_TEXT, new KeyboardBuilder()
                 .row(InlineKeyboardButton.callback("📝 ثبت‌نام به‌عنوان متخصص", MenuCallbacks.REGISTER))
+                .row(InlineKeyboardButton.callback("📱 شماره‌ی موبایل", MenuCallbacks.PHONE))
                 .row(InlineKeyboardButton.callback("🏠 منوی اصلی", MenuCallbacks.HOME))
                 .build());
     }

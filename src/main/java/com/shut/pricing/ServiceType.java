@@ -47,4 +47,10 @@ public class ServiceType {
     public int getSortOrder() { return sortOrder; }
     public boolean isActive() { return active; }
     public boolean asksName() { return asksName; }
+
+    public void setName(String name) { this.name = name; }
+    public void setIcon(String icon) { this.icon = icon; }
+    public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
+    public void setActive(boolean active) { this.active = active; }
+    public void setAsksName(boolean asksName) { this.asksName = asksName; }
 }

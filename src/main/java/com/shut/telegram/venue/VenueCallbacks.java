@@ -37,6 +37,11 @@ public final class VenueCallbacks {
         return PREFIX + ":cal:" + venueId + ":" + month.year() + ":" + month.month();
     }
 
+    /** Asks for the whole day instead of typing hours. */
+    static String fullDay(long venueId, LocalDate day) {
+        return PREFIX + ":bt:" + venueId + ":" + day;
+    }
+
     static String book(long venueId, LocalDate day) {
         return PREFIX + ":book:" + venueId + ":" + day;
     }

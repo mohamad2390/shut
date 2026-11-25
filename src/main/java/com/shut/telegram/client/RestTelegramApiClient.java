@@ -19,6 +19,7 @@ import com.shut.telegram.model.Message;
 import com.shut.telegram.model.MessageId;
 import com.shut.telegram.model.SendMediaRequest;
 import com.shut.telegram.model.SendMessageRequest;
+import com.shut.telegram.model.SendReplyKeyboardRequest;
 import com.shut.telegram.model.SendWidgetRequest;
 import com.shut.telegram.model.SetMyCommandsRequest;
 import com.shut.telegram.model.TelegramUser;
@@ -66,6 +67,11 @@ class RestTelegramApiClient implements TelegramApiClient {
 
     @Override
     public void sendMessage(SendMessageRequest request) {
+        track(call("sendMessage", request, new ParameterizedTypeReference<ApiResponse<Message>>() { }));
+    }
+
+    @Override
+    public void sendWithReplyKeyboard(SendReplyKeyboardRequest request) {
         track(call("sendMessage", request, new ParameterizedTypeReference<ApiResponse<Message>>() { }));
     }
 

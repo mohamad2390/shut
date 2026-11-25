@@ -4,6 +4,7 @@ import com.shut.common.calendar.JalaliMonth;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Optional;
 
 /** Reads the parts of callback data and conversation data back into numbers, dates and months. */
@@ -23,6 +24,15 @@ final class VenueArgs {
     static Optional<LocalDate> date(String raw) {
         try {
             return Optional.of(LocalDate.parse(raw));
+        } catch (DateTimeException e) {
+            return Optional.empty();
+        }
+    }
+
+    /** A time written by {@link LocalTime#toString}, or empty if it is missing. */
+    static Optional<LocalTime> time(String raw) {
+        try {
+            return raw == null ? Optional.empty() : Optional.of(LocalTime.parse(raw));
         } catch (DateTimeException e) {
             return Optional.empty();
         }

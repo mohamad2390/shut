@@ -194,6 +194,7 @@ final class VenueOwnerScreens {
     /** A request as the owner reads it, in the list and in the message sent when it arrives. */
     static String requestText(RequestLine line) {
         String note = line.booking().getNote() == null ? "" : "\n   " + line.booking().getNote();
-        return "• " + line.requester() + " — " + VenueTexts.date(line.booking().getDay()) + note;
+        return "• " + line.requester() + " — " + VenueTexts.date(line.booking().getDay()) + "، "
+                + VenueTexts.hours(line.booking()) + note;
     }
 }

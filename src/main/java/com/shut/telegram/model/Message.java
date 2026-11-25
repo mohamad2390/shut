@@ -13,6 +13,7 @@ public record Message(
         List<PhotoSize> photo,
         Video video,
         Document document,
-        String mediaGroupId
+        String mediaGroupId,
+        Contact contact
 ) {
 }

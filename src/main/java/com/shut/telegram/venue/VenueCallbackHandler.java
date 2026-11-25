@@ -85,6 +85,7 @@ class VenueCallbackHandler extends CallbackHandler {
             case "ph" -> sendPhotos(context);
             case "cal" -> openCalendar(context);
             case "book" -> startBooking(context);
+            case "bt" -> chooseFullDay(context);
             case "mybook" -> showMyBookings(context);
             default -> { }
         }
@@ -147,7 +148,7 @@ class VenueCallbackHandler extends CallbackHandler {
         Map<LocalDate, CalendarStatus> statuses = venueCalendar.statuses(id, month.atDay(1), month.atDay(month.length()));
         LocalDate today = dates.today();
         return VenueCalendarScreen.month(venue.getName(), month, statuses,
-                "روی یک روز آزاد (🟢) بزن تا درخواست رزرو بدی.",
+                "روی یک روز آزاد (🟢) بزن و ساعت مورد نظرت رو بگو.",
                 date -> statuses.get(date) == CalendarStatus.FREE && !date.isBefore(today)
                         ? VenueCallbacks.book(id, date) : null,
                 target -> VenueCallbacks.calendar(id, target),
@@ -155,27 +156,59 @@ class VenueCallbackHandler extends CallbackHandler {
                 InlineKeyboardButton.callback("↩️ صفحه‌ی مکان", VenueCallbacks.venue(id)));
     }
 
+    /** A free day was tapped: ask which hours are wanted. */
     private void startBooking(CallbackContext context) {
-        Optional<Venue> venue = listedVenue(context.arg(1));
+        Optional<Venue> venue = bookableVenue(context);
         Optional<LocalDate> day = VenueArgs.date(context.arg(2));
         if (venue.isEmpty() || day.isEmpty()) {
-            show(context, VenueScreens.gone());
             return;
         }
-        Long userId = accounts.resolve(context.user()).getId();
-        if (venue.get().getOwnerId().equals(userId)) {
-            messenger.sendText(context.chatId(), "این مکان خودته؛ نمی‌تونی برای خودت درخواست بدی.");
-            return;
-        }
-        if (day.get().isBefore(dates.today()) || !venueCalendar.isFree(venue.get().getId(), day.get())) {
+        if (!isOpenOn(venue.get(), day.get())) {
             show(context, monthScreen(venue.get(), JalaliMonth.of(day.get())));
             return;
         }
+        conversations.begin(context.user().id(), ConversationStep.AWAITING_BOOKING_TIME, bookingData(venue.get(), day.get()));
+        show(context, VenueScreens.askTime(venue.get(), day.get()));
+    }
+
+    /** "The whole day" was tapped: no hours, go on to the note. */
+    private void chooseFullDay(CallbackContext context) {
+        Optional<Venue> venue = bookableVenue(context);
+        Optional<LocalDate> day = VenueArgs.date(context.arg(2));
+        if (venue.isEmpty() || day.isEmpty()) {
+            return;
+        }
+        if (!isOpenOn(venue.get(), day.get())) {
+            show(context, monthScreen(venue.get(), JalaliMonth.of(day.get())));
+            return;
+        }
+        conversations.begin(context.user().id(), ConversationStep.AWAITING_BOOKING_NOTE, bookingData(venue.get(), day.get()));
+        show(context, VenueScreens.askNote(venue.get(), "تمام روز", day.get()));
+    }
+
+    /** The listed venue in the callback, if it is not the user's own; otherwise the user is told and nothing happens. */
+    private Optional<Venue> bookableVenue(CallbackContext context) {
+        Optional<Venue> venue = listedVenue(context.arg(1));
+        if (venue.isEmpty()) {
+            show(context, VenueScreens.gone());
+            return venue;
+        }
+        if (venue.get().getOwnerId().equals(accounts.resolve(context.user()).getId())) {
+            messenger.sendText(context.chatId(), "این مکان خودته؛ نمی‌تونی برای خودت درخواست بدی.");
+            return Optional.empty();
+        }
+        return venue;
+    }
+
+    private boolean isOpenOn(Venue venue, LocalDate day) {
+        return !day.isBefore(dates.today()) && venueCalendar.isFree(venue.getId(), day);
+    }
+
+    private static Map<String, String> bookingData(Venue venue, LocalDate day) {
         Map<String, String> data = new HashMap<>();
-        data.put(VENUE_KEY, String.valueOf(venue.get().getId()));
-        data.put(DAY_KEY, day.get().toString());
-        conversations.begin(context.user().id(), ConversationStep.AWAITING_BOOKING_NOTE, data);
-        show(context, VenueScreens.askNote(venue.get(), day.get()));
+        data.put(VENUE_KEY, String.valueOf(venue.getId()));
+        data.put(DAY_KEY, day.toString());
+        return data;
     }
 
     private void showMyBookings(CallbackContext context) {

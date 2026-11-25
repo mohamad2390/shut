@@ -72,9 +72,19 @@ final class VenueScreens {
                 .build());
     }
 
-    static Screen askNote(Venue venue, LocalDate day) {
-        return new Screen("📨 درخواست رزرو " + venue.getName() + " برای " + VenueTexts.date(day)
-                + "\n\nتوضیح کوتاه بفرست: نوع کار، تعداد نفرات و ساعت مورد نظر. این پیام همراه درخواستت برای صاحب مکان می‌ره."
+    /** Asks which hours of the day are wanted. */
+    static Screen askTime(Venue venue, LocalDate day) {
+        return new Screen("📨 رزرو " + venue.getName() + " برای " + VenueTexts.date(day)
+                + "\n\nساعت مورد نظرت رو بفرست؛ مثلاً «۹ تا ۱۲» یا «۱۴:۳۰ تا ۱۸». اگه کل روز رو می‌خوای، دکمه‌ی «تمام روز» رو بزن."
+                + "\n\nبرای انصراف /cancel رو بزن.", new KeyboardBuilder()
+                .row(InlineKeyboardButton.callback("🕘 تمام روز", VenueCallbacks.fullDay(venue.getId(), day)))
+                .row(InlineKeyboardButton.callback("انصراف", VenueCallbacks.venue(venue.getId())))
+                .build());
+    }
+
+    static Screen askNote(Venue venue, String hours, LocalDate day) {
+        return new Screen("📨 درخواست رزرو " + venue.getName() + " برای " + VenueTexts.date(day) + "، " + hours
+                + "\n\nتوضیح کوتاه بفرست: نوع کار و تعداد نفرات. این پیام همراه درخواستت برای صاحب مکان می‌ره."
                 + "\n\nبرای انصراف /cancel رو بزن.",
                 new KeyboardBuilder()
                         .row(InlineKeyboardButton.callback("انصراف", VenueCallbacks.venue(venue.getId())))
@@ -101,7 +111,7 @@ final class VenueScreens {
             bookings.forEach(booking -> {
                 Venue venue = venues.get(booking.getVenueId());
                 lines.append("\n").append(venue == null ? "مکان حذف‌شده" : venue.getName())
-                        .append(" — ").append(VenueTexts.date(booking.getDay()))
+                        .append(" — ").append(VenueTexts.date(booking.getDay())).append("، ").append(VenueTexts.hours(booking))
                         .append("\n   ").append(booking.getStatus().label());
                 if (venue != null && booking.getStatus() == BookingStatus.ACCEPTED) {
                     keyboard.row(InlineKeyboardButton.callback("✅ " + venue.getName(), VenueCallbacks.venue(venue.getId())));

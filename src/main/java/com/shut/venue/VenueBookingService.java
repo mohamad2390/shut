@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,30 +29,41 @@ public class VenueBookingService {
     }
 
     /**
-     * Asks for the venue on a day the owner marked free.
+     * Asks for the venue on a day the owner marked free, for the whole day (no times) or for hours of it.
      *
-     * @throws VenueBookingException if the venue is not listed, is the member's own, the day is not free, or the
-     *                               member already asked for that day and is waiting for an answer
+     * Other bookings of the same hours never get in the way: a venue can host several shoots at once.
+     *
+     * @throws VenueBookingException if the venue is not listed, is the member's own, the day is not free, the hours
+     *                               are not valid, or the member already asked for exactly this and is waiting for an
+     *                               answer
      */
     @Transactional
-    public VenueBooking request(Long venueId, Long requesterId, LocalDate day, String note) {
-        Venue venue = venues.findById(venueId).filter(found -> found.isListable() && prices.existsByVenueId(found.getId()))
+    public VenueBooking request(Long venueId, Long requesterId, LocalDate day, LocalTime start, LocalTime end,
+                                String note) {
+        Venue venue = venues.findById(venueId)
+                .filter(found -> found.isListable() && prices.existsByVenueId(found.getId()))
                 .orElseThrow(() -> new VenueBookingException(VenueBookingException.Reason.VENUE_NOT_AVAILABLE));
         if (venue.getOwnerId().equals(requesterId)) {
             throw new VenueBookingException(VenueBookingException.Reason.OWN_VENUE);
         }
+        if ((start == null) != (end == null) || (start != null && !start.isBefore(end))) {
+            throw new VenueBookingException(VenueBookingException.Reason.INVALID_TIME);
+        }
         if (day.isBefore(dates.today()) || !calendar.isFree(venueId, day)) {
             throw new VenueBookingException(VenueBookingException.Reason.DAY_NOT_FREE);
         }
-        if (bookings.existsByVenueIdAndRequesterIdAndDayAndStatus(venueId, requesterId, day, BookingStatus.PENDING)) {
+        boolean duplicate = bookings.findByVenueIdAndRequesterIdAndDayAndStatus(venueId, requesterId, day,
+                BookingStatus.PENDING).stream().anyMatch(earlier -> earlier.sameSlotAs(day, start, end));
+        if (duplicate) {
             throw new VenueBookingException(VenueBookingException.Reason.ALREADY_REQUESTED);
         }
-        return bookings.save(new VenueBooking(venueId, requesterId, day, note));
+        return bookings.save(new VenueBooking(venueId, requesterId, day, start, end, note));
     }
 
     /**
-     * The owner's answer to a request that is still waiting. Accepting marks the day taken. Empty if the request does
-     * not exist, is not for one of the owner's venues, or was answered already.
+     * The owner's answer to a request that is still waiting. Accepting does not change the calendar: the owner decides
+     * when a day is full. Empty if the request does not exist, is not for one of the owner's venues, or was answered
+     * already.
      */
     @Transactional
     public Optional<VenueBooking> respond(Long bookingId, Long ownerId, boolean accept) {
@@ -60,9 +72,6 @@ public class VenueBookingService {
                 .filter(booking -> venues.findByIdAndOwnerId(booking.getVenueId(), ownerId).isPresent())
                 .map(booking -> {
                     booking.setStatus(accept ? BookingStatus.ACCEPTED : BookingStatus.DECLINED);
-                    if (accept) {
-                        calendar.markBusy(booking.getVenueId(), booking.getDay());
-                    }
                     return booking;
                 });
     }

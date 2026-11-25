@@ -65,6 +65,26 @@ public class CalendarService {
     }
 
     /**
+     * Sets the day to the given status, or clears it when {@code status} is null.
+     *
+     * @throws IllegalArgumentException if the day is in the past or too far ahead
+     */
+    @Transactional
+    public void setStatus(Long userId, LocalDate day, CalendarStatus status) {
+        if (day.isBefore(today()) || day.isAfter(lastMarkableDay())) {
+            throw new IllegalArgumentException("Day is outside the range that can be marked: " + day);
+        }
+        Optional<CalendarDay> existing = repository.findByUserIdAndDay(userId, day);
+        if (status == null) {
+            existing.ifPresent(repository::delete);
+        } else if (existing.isPresent()) {
+            existing.get().setStatus(status);
+        } else {
+            repository.save(new CalendarDay(userId, day, status));
+        }
+    }
+
+    /**
      * Moves the day to its next status: not set, then free, then busy, then back to not set.
      * Returns the new status, or empty if the day is now not set.
      *

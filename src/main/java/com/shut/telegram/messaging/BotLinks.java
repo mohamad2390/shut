@@ -37,6 +37,12 @@ public class BotLinks {
                 : Optional.of("https://t.me/" + username + "?start=" + PROFILE_PREFIX + userId);
     }
 
+    /** The link that opens the bot, or empty if its username cannot be found right now. */
+    public Optional<String> botUrl() {
+        String username = username();
+        return username == null ? Optional.empty() : Optional.of("https://t.me/" + username);
+    }
+
     /** A button that opens Telegram's share sheet with the link and a line of text. */
     public static InlineKeyboardButton shareButton(String link, String text) {
         return InlineKeyboardButton.link("📤 ارسال برای دیگران", "https://t.me/share/url?url=" + encode(link)
