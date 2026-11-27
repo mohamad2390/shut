@@ -30,6 +30,23 @@ public interface ApiPaths {
         String SHOWCASE_MEDIA = "/{id}/showcase/{itemId}/media";
     }
 
+    /** Public read-only view of the studios, for the web app. */
+    interface Studios {
+        String BASE = API_V1 + "/studios";
+        String BY_ID = "/{id}";
+        String MEDIA = "/{id}/media/{mediaId}";
+    }
+
+    /** Public read-only view of the equipment rental shops and their items, for the web app. */
+    interface Rental {
+        String BASE = API_V1 + "/rental";
+        String SHOPS = "/shops";
+        String SHOP = "/shops/{id}";
+        String ITEMS = "/items";
+        String ITEM = "/items/{id}";
+        String ITEM_PHOTO = "/items/{id}/photos/{photoId}";
+    }
+
     /** Public read-only view of the photography venues, for the web app. */
     interface Venues {
         String BASE = API_V1 + "/venues";

@@ -16,12 +16,19 @@ final class StudioOwnerCallbacks {
     static final String INVITE = PREFIX + ":iv";
     static final String DELETE = PREFIX + ":del";
     static final String CONFIRM_DELETE = PREFIX + ":delok";
+    /** The member finished ticking the services of a package. */
+    static final String SERVICES_DONE = PREFIX + ":svok";
 
     private StudioOwnerCallbacks() {
     }
 
     static String edit(StudioField field) {
         return PREFIX + ":e:" + field.name();
+    }
+
+    /** Ticks or unticks one service of the catalog while a package is being made. */
+    static String service(long serviceId) {
+        return PREFIX + ":sv:" + serviceId;
     }
 
     static String removeOffering(long offeringId) {

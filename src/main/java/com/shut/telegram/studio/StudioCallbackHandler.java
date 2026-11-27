@@ -4,6 +4,7 @@ import com.shut.studio.Studio;
 import com.shut.studio.StudioMedia;
 import com.shut.studio.StudioMember;
 import com.shut.studio.StudioMemberService;
+import com.shut.studio.StudioOffering;
 import com.shut.studio.StudioService;
 import com.shut.telegram.account.TelegramAccountResolver;
 import com.shut.telegram.client.TelegramApiClient;
@@ -65,8 +66,7 @@ class StudioCallbackHandler extends CallbackHandler {
             case "home" -> show(context, StudioScreens.home());
             case "list" -> show(context, StudioScreens.list(studios.listed(page(context.arg(1)), PAGE_SIZE)));
             case "s" -> show(context, listed(context).map(studio -> page(context, studio)).orElseGet(StudioScreens::gone));
-            case "of" -> show(context, listed(context).map(studio ->
-                    StudioScreens.offerings(studio, studios.offerings(studio.getId()))).orElseGet(StudioScreens::gone));
+            case "of" -> show(context, listed(context).map(this::offeringsScreen).orElseGet(StudioScreens::gone));
             case "pp" -> show(context, listed(context).map(this::peopleScreen).orElseGet(StudioScreens::gone));
             case "md" -> sendMedia(context);
             case "lv" -> leave(context);
@@ -92,6 +92,11 @@ class StudioCallbackHandler extends CallbackHandler {
         Long id = studio.getId();
         return StudioScreens.studio(studio, studios.offeringCount(id), studios.mediaCount(id), members.peopleCount(id),
                 users.findById(studio.getOwnerId()).getTelegramUsername(), members.isIn(id, viewerId));
+    }
+
+    private Screen offeringsScreen(Studio studio) {
+        List<StudioOffering> offerings = studios.offerings(studio.getId());
+        return StudioScreens.offerings(studio, offerings, studios.serviceLabels(offerings));
     }
 
     private Screen peopleScreen(Studio studio) {

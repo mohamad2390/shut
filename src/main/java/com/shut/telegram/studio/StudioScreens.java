@@ -12,6 +12,7 @@ import com.shut.telegram.model.InlineKeyboardButton;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
+import java.util.Map;
 
 /** The pages anyone sees: the studios section, the list, a studio's page, its services and its people. */
 final class StudioScreens {
@@ -77,8 +78,8 @@ final class StudioScreens {
                 .build());
     }
 
-    static Screen offerings(Studio studio, List<StudioOffering> offerings) {
-        return new Screen("🎬 خدمات " + studio.getName() + "\n\n" + StudioTexts.offerings(offerings)
+    static Screen offerings(Studio studio, List<StudioOffering> offerings, Map<Long, String> labels) {
+        return new Screen("🎬 خدمات " + studio.getName() + "\n\n" + StudioTexts.offerings(offerings, labels)
                 + "\n\nبرای سفارش یا قیمت دقیق با استودیو تماس بگیر.", new KeyboardBuilder()
                 .row(InlineKeyboardButton.callback("↩️ صفحهٔ استودیو", StudioCallbacks.studio(studio.getId())))
                 .build());

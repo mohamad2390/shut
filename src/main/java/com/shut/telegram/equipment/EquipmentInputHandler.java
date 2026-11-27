@@ -3,7 +3,6 @@ package com.shut.telegram.equipment;
 import com.shut.equipment.EquipmentBrand;
 import com.shut.equipment.EquipmentCatalog;
 import com.shut.equipment.EquipmentModel;
-import com.shut.equipment.EquipmentService;
 import com.shut.equipment.EquipmentType;
 import com.shut.telegram.account.TelegramAccountResolver;
 import com.shut.telegram.config.TelegramBotEnabled;
@@ -16,13 +15,17 @@ import com.shut.telegram.messaging.BotMessenger;
 import com.shut.telegram.model.Message;
 import com.shut.telegram.model.TelegramUser;
 import com.shut.telegram.model.Update;
+import com.shut.user.entity.User;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Receives a type, brand or model name typed because it was not in the list. A name that is new is added to the
@@ -44,17 +47,17 @@ class EquipmentInputHandler implements UpdateHandler {
     private final MembershipGate membershipGate;
     private final TelegramAccountResolver accounts;
     private final EquipmentCatalog catalog;
-    private final EquipmentService equipment;
+    private final Map<String, EquipmentChoice> choices;
     private final BotMessenger messenger;
 
     EquipmentInputHandler(ConversationService conversations, MembershipGate membershipGate,
                           TelegramAccountResolver accounts, EquipmentCatalog catalog,
-                          EquipmentService equipment, BotMessenger messenger) {
+                          List<EquipmentChoice> choices, BotMessenger messenger) {
         this.conversations = conversations;
         this.membershipGate = membershipGate;
         this.accounts = accounts;
         this.catalog = catalog;
-        this.equipment = equipment;
+        this.choices = choices.stream().collect(Collectors.toMap(EquipmentChoice::purpose, Function.identity()));
         this.messenger = messenger;
     }
 
@@ -84,7 +87,13 @@ class EquipmentInputHandler implements UpdateHandler {
         if (state == null) {
             return;
         }
-        long userId = accounts.resolve(from).getId();
+        EquipmentChoice choice = choices.get(state.getData().get(EquipmentCallbackHandler.PURPOSE_KEY));
+        if (choice == null) {
+            finishGone(from, chatId);
+            return;
+        }
+        User member = accounts.resolve(from);
+        long userId = member.getId();
         String name = message.text().strip();
         int limit = state.getStep() == ConversationStep.AWAITING_EQUIPMENT_MODEL ? MAX_MODEL_LENGTH : MAX_NAME_LENGTH;
         if (name.length() > limit) {
@@ -93,9 +102,9 @@ class EquipmentInputHandler implements UpdateHandler {
         }
         try {
             switch (state.getStep()) {
-                case AWAITING_EQUIPMENT_TYPE -> receiveType(from, chatId, name, userId);
-                case AWAITING_EQUIPMENT_BRAND -> receiveBrand(from, chatId, name, userId, state.getData());
-                case AWAITING_EQUIPMENT_MODEL -> receiveModel(from, chatId, name, userId, state.getData());
+                case AWAITING_EQUIPMENT_TYPE -> receiveType(from, chatId, name, userId, choice);
+                case AWAITING_EQUIPMENT_BRAND -> receiveBrand(from, chatId, name, userId, state.getData(), choice);
+                case AWAITING_EQUIPMENT_MODEL -> receiveModel(from, chatId, name, member, state.getData(), choice);
                 default -> { }
             }
         } catch (IllegalArgumentException e) {
@@ -103,13 +112,14 @@ class EquipmentInputHandler implements UpdateHandler {
         }
     }
 
-    private void receiveType(TelegramUser from, long chatId, String name, long userId) {
+    private void receiveType(TelegramUser from, long chatId, String name, long userId, EquipmentChoice choice) {
         EquipmentType type = catalog.typeNamed(name, userId).value();
         conversations.clear(from.id());
-        messenger.send(chatId, EquipmentScreens.chooseBrand(type, catalog.brandsFor(type.getId())));
+        messenger.send(chatId, EquipmentScreens.chooseBrand(choice.purpose(), type, catalog.brandsFor(type.getId())));
     }
 
-    private void receiveBrand(TelegramUser from, long chatId, String name, long userId, Map<String, String> data) {
+    private void receiveBrand(TelegramUser from, long chatId, String name, long userId, Map<String, String> data,
+                              EquipmentChoice choice) {
         Optional<EquipmentType> type = EquipmentCallbackHandler.parse(data.getOrDefault(EquipmentCallbackHandler.TYPE_KEY, ""))
                 .flatMap(catalog::type);
         if (type.isEmpty()) {
@@ -118,26 +128,25 @@ class EquipmentInputHandler implements UpdateHandler {
         }
         EquipmentBrand brand = catalog.brandNamed(name, userId).value();
         conversations.clear(from.id());
-        messenger.send(chatId, EquipmentScreens.chooseModel(type.get(), brand,
+        messenger.send(chatId, EquipmentScreens.chooseModel(choice.purpose(), type.get(), brand,
                 catalog.modelsFor(type.get().getId(), brand.getId())));
     }
 
-    private void receiveModel(TelegramUser from, long chatId, String name, long userId, Map<String, String> data) {
+    private void receiveModel(TelegramUser from, long chatId, String name, User member, Map<String, String> data,
+                              EquipmentChoice choice) {
         Optional<Long> typeId = EquipmentCallbackHandler.parse(data.getOrDefault(EquipmentCallbackHandler.TYPE_KEY, ""));
         Optional<Long> brandId = EquipmentCallbackHandler.parse(data.getOrDefault(EquipmentCallbackHandler.BRAND_KEY, ""));
         if (typeId.isEmpty() || brandId.isEmpty()) {
             finishGone(from, chatId);
             return;
         }
-        EquipmentModel model = catalog.modelNamed(typeId.get(), brandId.get(), name, userId).value();
-        EquipmentService.AddResult result = equipment.add(userId, model.getId());
+        EquipmentModel model = catalog.modelNamed(typeId.get(), brandId.get(), name, member.getId()).value();
         conversations.clear(from.id());
-        messenger.sendText(chatId, switch (result) {
-            case ADDED -> "✅ " + model.displayName() + " به تجهیزاتت اضافه شد.";
-            case ALREADY_OWNED -> "این تجهیز از قبل توی فهرستت هست.";
-            case LIMIT_REACHED -> "حداکثر " + EquipmentService.MAX_ITEMS + " تجهیز می‌تونی داشته باشی. اول یکی رو حذف کن.";
-        });
-        messenger.send(chatId, EquipmentScreens.home(equipment.list(userId)));
+        EquipmentChoice.Outcome outcome = choice.chosen(member, from.id(), model);
+        if (outcome.note() != null) {
+            messenger.sendText(chatId, outcome.note());
+        }
+        messenger.send(chatId, outcome.screen());
     }
 
     private void finishGone(TelegramUser from, long chatId) {

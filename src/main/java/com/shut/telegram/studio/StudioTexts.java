@@ -5,6 +5,8 @@ import com.shut.studio.Studio;
 import com.shut.studio.StudioOffering;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Texts about studios and their services. */
 final class StudioTexts {
@@ -42,19 +44,21 @@ final class StudioTexts {
         return text.toString();
     }
 
-    /** A service: title, what it includes and its price. */
-    static String offering(StudioOffering offering) {
+    /** A service package: title, the catalog services it includes (by label) and its price. */
+    static String offering(StudioOffering offering, Map<Long, String> labels) {
         StringBuilder text = new StringBuilder("🎬 ").append(offering.getTitle());
-        if (offering.getIncludes() != null) {
-            text.append("\n   شامل: ").append(offering.getIncludes());
+        String includes = offering.getServiceIds().stream().map(labels::get).filter(java.util.Objects::nonNull)
+                .sorted().collect(Collectors.joining("، "));
+        if (!includes.isEmpty()) {
+            text.append("\n   شامل: ").append(includes);
         }
         text.append("\n   💰 ").append(offering.getPrice() == null ? "قیمت: با تماس" : money(offering.getPrice()));
         return text.toString();
     }
 
-    static String offerings(List<StudioOffering> offerings) {
+    static String offerings(List<StudioOffering> offerings, Map<Long, String> labels) {
         StringBuilder text = new StringBuilder();
-        offerings.forEach(offering -> text.append(text.length() == 0 ? "" : "\n\n").append(offering(offering)));
+        offerings.forEach(offering -> text.append(text.length() == 0 ? "" : "\n\n").append(offering(offering, labels)));
         return text.toString();
     }
 

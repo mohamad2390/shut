@@ -35,9 +35,6 @@ import java.util.Set;
 class StudioInputHandler implements UpdateHandler {
 
     static final int MAX_TITLE = 120;
-    static final int MAX_INCLUDES = 500;
-    private static final String TITLE_KEY = "title";
-    private static final String INCLUDES_KEY = "includes";
     private static final Set<ConversationStep> STEPS = Set.of(ConversationStep.AWAITING_STUDIO_WIZARD,
             ConversationStep.AWAITING_STUDIO_FIELD, ConversationStep.AWAITING_OFFERING,
             ConversationStep.AWAITING_STUDIO_INVITEE);
@@ -156,33 +153,24 @@ class StudioInputHandler implements UpdateHandler {
         messenger.send(chatId, manage(user));
     }
 
-    /** A service takes three answers: its title, what it includes, and its price. */
+    /**
+     * A package takes three answers: its title, the services it includes (ticked with buttons, see
+     * {@link StudioOwnerCallbackHandler}), and its price.
+     */
     private void offering(TelegramUser from, long chatId, User user, String raw, Map<String, String> data) {
         String text = raw.strip().replaceAll("[ \\t]+", " ");
-        Map<String, String> next = new HashMap<>(data);
         switch (data.getOrDefault(StudioOwnerCallbackHandler.STAGE_KEY, "")) {
             case "TITLE" -> {
                 if (text.isEmpty() || text.length() > MAX_TITLE) {
                     messenger.sendText(chatId, "اسم خدمت باید بین ۱ تا ۱۲۰ حرف باشه. دوباره بفرست یا /cancel رو بزن.");
                     return;
                 }
-                next.put(TITLE_KEY, text);
-                next.put(StudioOwnerCallbackHandler.STAGE_KEY, "INCLUDES");
-                conversations.begin(from.id(), ConversationStep.AWAITING_OFFERING, next);
-                messenger.send(chatId, StudioOwnerScreens.askOfferingIncludes());
+                conversations.begin(from.id(), ConversationStep.AWAITING_OFFERING, Map.of(
+                        StudioOwnerCallbackHandler.STAGE_KEY, "SERVICES", StudioOwnerCallbackHandler.TITLE_KEY, text));
+                messenger.send(chatId, StudioOwnerScreens.pickServices(text, studios.selectableServices(),
+                        ServiceSelection.parse(null), false));
             }
-            case "INCLUDES" -> {
-                if (text.length() > MAX_INCLUDES) {
-                    messenger.sendText(chatId, "توضیح خیلی بلنده؛ حداکثر ۵۰۰ حرف. دوباره بفرست یا /cancel رو بزن.");
-                    return;
-                }
-                if (!text.isEmpty() && !text.equals("-")) {
-                    next.put(INCLUDES_KEY, text);
-                }
-                next.put(StudioOwnerCallbackHandler.STAGE_KEY, "PRICE");
-                conversations.begin(from.id(), ConversationStep.AWAITING_OFFERING, next);
-                messenger.send(chatId, StudioOwnerScreens.askOfferingPrice());
-            }
+            case "SERVICES" -> messenger.sendText(chatId, "خدمات رو با دکمه‌های بالا انتخاب کن، بعد «ثبت انتخاب» رو بزن.");
             case "PRICE" -> savePrice(from, chatId, user, text, data);
             default -> conversations.clear(from.id());
         }
@@ -204,13 +192,14 @@ class StudioInputHandler implements UpdateHandler {
             }
         }
         conversations.clear(from.id());
-        if (studios.addOffering(user.getId(), data.get(TITLE_KEY), data.get(INCLUDES_KEY), price).isEmpty()) {
+        if (studios.addOffering(user.getId(), data.get(StudioOwnerCallbackHandler.TITLE_KEY),
+                ServiceSelection.parse(data.get(StudioOwnerCallbackHandler.SERVICES_KEY)).ids(), price).isEmpty()) {
             messenger.sendText(chatId, "نتونستم خدمت رو اضافه کنم؛ شاید به سقف ۱۵ خدمت رسیدی.");
         } else {
             messenger.sendText(chatId, "✅ خدمت اضافه شد.");
         }
         studios.ownedBy(user.getId()).ifPresent(studio ->
-                messenger.send(chatId, StudioOwnerScreens.offerings(studios.offerings(studio.getId()))));
+                messenger.send(chatId, offeringsScreen(studio)));
     }
 
     private void invite(TelegramUser from, long chatId, User user, String raw) {
@@ -244,6 +233,11 @@ class StudioInputHandler implements UpdateHandler {
                         .map(member -> new PersonLine(member.getUserId(), notifier.nameOf(member.getUserId()))).toList(),
                 members.pending(studio.get().getId()).stream()
                         .map(member -> new PersonLine(member.getUserId(), notifier.nameOf(member.getUserId()))).toList()));
+    }
+
+    private com.shut.telegram.messaging.Screen offeringsScreen(Studio studio) {
+        java.util.List<com.shut.studio.StudioOffering> offerings = studios.offerings(studio.getId());
+        return StudioOwnerScreens.offerings(offerings, studios.serviceLabels(offerings));
     }
 
     private com.shut.telegram.messaging.Screen manage(User user) {

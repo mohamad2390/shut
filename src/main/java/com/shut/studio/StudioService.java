@@ -1,5 +1,7 @@
 package com.shut.studio;
 
+import com.shut.pricing.ServiceType;
+import com.shut.pricing.ServiceTypeRepository;
 import com.shut.user.entity.RoleCodes;
 import com.shut.user.entity.User;
 import com.shut.user.service.RoleService;
@@ -8,9 +10,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /** Studios, their services and their showcase. Every change checks that the studio belongs to the member making it. */
 @Service
@@ -25,13 +31,15 @@ public class StudioService {
     private final StudioRepository studios;
     private final StudioOfferingRepository offerings;
     private final StudioMediaRepository media;
+    private final ServiceTypeRepository serviceTypes;
     private final RoleService roles;
 
     public StudioService(StudioRepository studios, StudioOfferingRepository offerings, StudioMediaRepository media,
-                         RoleService roles) {
+                         ServiceTypeRepository serviceTypes, RoleService roles) {
         this.studios = studios;
         this.offerings = offerings;
         this.media = media;
+        this.serviceTypes = serviceTypes;
         this.roles = roles;
     }
 
@@ -100,12 +108,35 @@ public class StudioService {
         return offerings.countByStudioId(studioId);
     }
 
-    /** Adds a service to the owner's studio. Empty if they have no studio or reached the limit. */
+    /** The services of the catalog a package can include: the ones that are switched on. */
+    @Transactional(readOnly = true)
+    public List<ServiceType> selectableServices() {
+        return serviceTypes.findByActiveTrueOrderBySortOrderAscIdAsc();
+    }
+
+    /** The icon and name of every service the packages include, by id, also for services since switched off. */
+    @Transactional(readOnly = true)
+    public Map<Long, String> serviceLabels(Collection<StudioOffering> offerings) {
+        List<Long> ids = offerings.stream().flatMap(offering -> offering.getServiceIds().stream()).distinct().toList();
+        return serviceTypes.findAllById(ids).stream()
+                .collect(Collectors.toMap(ServiceType::getId, service -> service.getIcon() + " " + service.getName()));
+    }
+
+    /**
+     * Adds a package to the owner's studio, made of services from the catalog. Services that are not in the catalog or
+     * are switched off are ignored. Empty if they have no studio, reached the limit, or no service is left.
+     */
     @Transactional
-    public Optional<StudioOffering> addOffering(Long ownerId, String title, String includes, Long price) {
+    public Optional<StudioOffering> addOffering(Long ownerId, String title, Collection<Long> serviceIds, Long price) {
+        var chosen = new LinkedHashSet<Long>();
+        serviceTypes.findByActiveTrueOrderBySortOrderAscIdAsc().stream()
+                .map(ServiceType::getId).filter(serviceIds::contains).forEach(chosen::add);
+        if (chosen.isEmpty()) {
+            return Optional.empty();
+        }
         return studios.findByOwnerId(ownerId)
                 .filter(studio -> offerings.countByStudioId(studio.getId()) < MAX_OFFERINGS)
-                .map(studio -> offerings.save(new StudioOffering(studio.getId(), title, includes, price)));
+                .map(studio -> offerings.save(new StudioOffering(studio.getId(), title, chosen, price)));
     }
 
     @Transactional

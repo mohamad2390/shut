@@ -32,21 +32,21 @@ final class EquipmentScreens {
             items.forEach(item -> keyboard.row(InlineKeyboardButton.callback(
                     "✖ " + item.label(), EquipmentCallbacks.remove(item.getId()))));
         }
-        keyboard.row(InlineKeyboardButton.callback("➕ افزودن تجهیز", EquipmentCallbacks.ADD))
+        keyboard.row(InlineKeyboardButton.callback("➕ افزودن تجهیز", EquipmentCallbacks.choose(OwnGearChoice.PURPOSE)))
                 .row(InlineKeyboardButton.callback("↩️ پروفایل", MenuCallbacks.PROFILE));
         return new Screen(text, keyboard.build());
     }
 
-    static Screen chooseType(List<EquipmentType> types) {
+    static Screen chooseType(String purpose, List<EquipmentType> types, String backCallback, String backLabel) {
         List<InlineKeyboardButton> buttons = new ArrayList<>(types.stream()
                 .map(type -> InlineKeyboardButton.callback(type.getIcon() + " " + type.getName(),
-                        EquipmentCallbacks.type(type.getId())))
+                        EquipmentCallbacks.type(purpose, type.getId())))
                 .toList());
         return new Screen("🎒 نوع تجهیز چیه؟",
                 new KeyboardBuilder()
                         .grid(buttons, 2)
-                        .row(InlineKeyboardButton.callback("➕ نوع دیگه", EquipmentCallbacks.OTHER_TYPE))
-                        .row(InlineKeyboardButton.callback("↩️ تجهیزات من", EquipmentCallbacks.HOME))
+                        .row(InlineKeyboardButton.callback("➕ نوع دیگه", EquipmentCallbacks.otherType(purpose)))
+                        .row(InlineKeyboardButton.callback(backLabel, backCallback))
                         .build());
     }
 
@@ -54,16 +54,16 @@ final class EquipmentScreens {
         return typed("نوع تجهیزت رو بنویس (مثلاً «رِف‌لکتور»).");
     }
 
-    static Screen chooseBrand(EquipmentType type, List<EquipmentBrand> brands) {
+    static Screen chooseBrand(String purpose, EquipmentType type, List<EquipmentBrand> brands) {
         List<InlineKeyboardButton> buttons = brands.stream()
                 .map(brand -> InlineKeyboardButton.callback(brand.getName(),
-                        EquipmentCallbacks.brand(type.getId(), brand.getId())))
+                        EquipmentCallbacks.brand(purpose, type.getId(), brand.getId())))
                 .toList();
         return new Screen(type.getIcon() + " " + type.getName() + "\n\nبرندش چیه؟",
                 new KeyboardBuilder()
                         .grid(buttons, 3)
-                        .row(InlineKeyboardButton.callback("➕ برند دیگه", EquipmentCallbacks.otherBrand(type.getId())))
-                        .row(InlineKeyboardButton.callback("↩️ نوع‌ها", EquipmentCallbacks.ADD))
+                        .row(InlineKeyboardButton.callback("➕ برند دیگه", EquipmentCallbacks.otherBrand(purpose, type.getId())))
+                        .row(InlineKeyboardButton.callback("↩️ نوع‌ها", EquipmentCallbacks.choose(purpose)))
                         .build());
     }
 
@@ -71,9 +71,9 @@ final class EquipmentScreens {
         return typed("برند " + type.getName() + " رو بنویس (مثلاً «سونی» یا Sony).");
     }
 
-    static Screen chooseModel(EquipmentType type, EquipmentBrand brand, List<EquipmentModel> models) {
+    static Screen chooseModel(String purpose, EquipmentType type, EquipmentBrand brand, List<EquipmentModel> models) {
         List<InlineKeyboardButton> buttons = models.stream()
-                .map(model -> InlineKeyboardButton.callback(model.getName(), EquipmentCallbacks.model(model.getId())))
+                .map(model -> InlineKeyboardButton.callback(model.getName(), EquipmentCallbacks.model(purpose, model.getId())))
                 .toList();
         String text = type.getIcon() + " " + type.getName() + " " + brand.getName()
                 + (models.isEmpty() ? "\n\nهنوز مدلی ثبت نشده. اولین نفر باش و مدلش رو بنویس." : "\n\nمدلش چیه؟");
@@ -81,8 +81,8 @@ final class EquipmentScreens {
                 new KeyboardBuilder()
                         .grid(buttons, 2)
                         .row(InlineKeyboardButton.callback("➕ مدل دیگه",
-                                EquipmentCallbacks.otherModel(type.getId(), brand.getId())))
-                        .row(InlineKeyboardButton.callback("↩️ برندها", EquipmentCallbacks.type(type.getId())))
+                                EquipmentCallbacks.otherModel(purpose, type.getId(), brand.getId())))
+                        .row(InlineKeyboardButton.callback("↩️ برندها", EquipmentCallbacks.type(purpose, type.getId())))
                         .build());
     }
 

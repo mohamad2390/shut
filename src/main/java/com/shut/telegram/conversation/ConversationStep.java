@@ -44,10 +44,12 @@ public enum ConversationStep {
     AWAITING_OFFERING,
     AWAITING_STUDIO_MEDIA,
     AWAITING_STUDIO_INVITEE,
-    /** The name, city and description of an equipment rental card. */
-    AWAITING_BUSINESS_NAME,
-    AWAITING_BUSINESS_CITY,
-    AWAITING_BUSINESS_DESCRIPTION,
+    /** Registering a rental shop (one answer after another), editing a detail, an item's three answers or new price, a photo, a search. */
+    AWAITING_RENTAL_WIZARD,
+    AWAITING_RENTAL_FIELD,
+    AWAITING_RENTAL_ITEM,
+    AWAITING_RENTAL_PHOTO,
+    AWAITING_RENTAL_SEARCH,
     /** The title, then the price, of a new gear listing; its condition is picked with a button. */
     AWAITING_LISTING_TITLE,
     AWAITING_LISTING_PRICE,

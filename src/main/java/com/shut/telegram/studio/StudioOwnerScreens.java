@@ -1,5 +1,6 @@
 package com.shut.telegram.studio;
 
+import com.shut.pricing.ServiceType;
 import com.shut.studio.Studio;
 import com.shut.studio.StudioMemberService;
 import com.shut.studio.StudioOffering;
@@ -11,6 +12,7 @@ import com.shut.telegram.model.InlineKeyboardMarkup;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.shut.common.text.PersianDigits.toPersian;
 
@@ -89,14 +91,14 @@ final class StudioOwnerScreens {
                 .build());
     }
 
-    static Screen offerings(List<StudioOffering> offerings) {
+    static Screen offerings(List<StudioOffering> offerings, Map<Long, String> labels) {
         KeyboardBuilder keyboard = new KeyboardBuilder();
         String text;
         if (offerings.isEmpty()) {
             text = "🎬 خدمات\n\nهنوز خدمتی اضافه نکردی. هر خدمت یک بستهٔ کامل‌ه؛ مثلاً «پوشش کامل مراسم عروسی» "
-                    + "شامل عکاسی، فیلمبرداری، فرمالیته و آلبوم.";
+                    + "که از بین خدمات شات (عکاسی، فیلمبرداری، فرمالیته، آلبوم…) انتخاب می‌کنی چی شاملش می‌شه.";
         } else {
-            text = "🎬 خدمات\n\n" + StudioTexts.offerings(offerings);
+            text = "🎬 خدمات\n\n" + StudioTexts.offerings(offerings, labels);
             offerings.forEach(offering -> keyboard.row(InlineKeyboardButton.callback("❌ " + offering.getTitle(),
                     StudioOwnerCallbacks.removeOffering(offering.getId()))));
         }
@@ -112,9 +114,22 @@ final class StudioOwnerScreens {
                 + "برای انصراف /cancel رو بزن.", cancelTo(StudioOwnerCallbacks.OFFERINGS));
     }
 
-    static Screen askOfferingIncludes() {
-        return new Screen("🎬 خدمت تازه (۲ از ۳)\n\nچی شامل این خدمته؟ مثلاً «عکاسی، فیلمبرداری، فرمالیته، آلبوم». "
-                + "اگه نمی‌خوای بنویسی «-» بفرست.", cancelTo(StudioOwnerCallbacks.OFFERINGS));
+    /** The catalog services to tick for a package; a tick marks the ones already chosen. */
+    static Screen pickServices(String title, List<ServiceType> catalog, ServiceSelection chosen, boolean warn) {
+        List<InlineKeyboardButton> toggles = catalog.stream()
+                .map(service -> InlineKeyboardButton.callback((chosen.contains(service.getId()) ? "✅ " : "")
+                        + service.getIcon() + " " + service.getName(), StudioOwnerCallbacks.service(service.getId())))
+                .toList();
+        String text = "🎬 «" + title + "» (۲ از ۳)\n\nچه خدماتی شامل این بسته می‌شه؟ هر چندتا که لازمه بزن، بعد «ثبت انتخاب».";
+        if (warn) {
+            text += "\n\n⚠️ حداقل یک خدمت انتخاب کن.";
+        }
+        return new Screen(text, new KeyboardBuilder()
+                .grid(toggles, 2)
+                .row(InlineKeyboardButton.callback("✔️ ثبت انتخاب (" + toPersian(chosen.size()) + ")",
+                        StudioOwnerCallbacks.SERVICES_DONE))
+                .row(InlineKeyboardButton.callback("انصراف", StudioOwnerCallbacks.OFFERINGS))
+                .build());
     }
 
     static Screen askOfferingPrice() {

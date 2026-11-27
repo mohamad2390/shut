@@ -7,6 +7,7 @@ import com.shut.telegram.messaging.KeyboardBuilder;
 import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.model.InlineKeyboardButton;
 import com.shut.telegram.project.ProjectCallbacks;
+import com.shut.telegram.rental.RentalCallbacks;
 import com.shut.telegram.studio.StudioCallbacks;
 import com.shut.telegram.venue.VenueCallbacks;
 
@@ -25,6 +26,7 @@ public final class MainMenuScreen {
                         .row(InlineKeyboardButton.callback("📋 پروژه‌های مناقصه‌ای", ProjectCallbacks.HOME))
                         .row(InlineKeyboardButton.callback("📍 مکان‌های عکاسی", VenueCallbacks.HOME))
                         .row(InlineKeyboardButton.callback("🏢 استودیوها", StudioCallbacks.HOME))
+                        .row(InlineKeyboardButton.callback("🎒 اجارهٔ تجهیزات", RentalCallbacks.HOME))
                         .row(InlineKeyboardButton.callback("🛒 بازار تجهیزات", MarketCallbacks.HOME))
                         .row(InlineKeyboardButton.callback("💼 کسب‌وکار من", BusinessCallbacks.HOME))
                         .build());

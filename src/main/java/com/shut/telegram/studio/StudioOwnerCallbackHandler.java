@@ -3,11 +3,14 @@ package com.shut.telegram.studio;
 import com.shut.studio.Studio;
 import com.shut.studio.StudioMedia;
 import com.shut.studio.StudioMemberService;
+import com.shut.studio.StudioOffering;
 import com.shut.studio.StudioService;
+import com.shut.pricing.ServiceType;
 import com.shut.telegram.account.TelegramAccountResolver;
 import com.shut.telegram.client.TelegramApiClient;
 import com.shut.telegram.config.TelegramBotEnabled;
 import com.shut.telegram.conversation.ConversationService;
+import com.shut.telegram.conversation.ConversationState;
 import com.shut.telegram.conversation.ConversationStep;
 import com.shut.telegram.handler.CallbackContext;
 import com.shut.telegram.handler.CallbackHandler;
@@ -17,6 +20,7 @@ import com.shut.telegram.messaging.Screen;
 import com.shut.telegram.storage.MediaBackupService;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +32,8 @@ class StudioOwnerCallbackHandler extends CallbackHandler {
 
     static final String FIELD_KEY = "field";
     static final String STAGE_KEY = "stage";
+    static final String TITLE_KEY = "title";
+    static final String SERVICES_KEY = "services";
 
     private final BotMessenger messenger;
     private final ConversationService conversations;
@@ -58,8 +64,13 @@ class StudioOwnerCallbackHandler extends CallbackHandler {
 
     @Override
     protected void onCallback(CallbackContext context) {
-        conversations.clear(context.user().id());
         Long userId = accounts.resolve(context.user()).getId();
+        // Ticking services goes on inside the conversation of a package being made, so it must not be cleared.
+        if (context.arg(0).equals("sv") || context.arg(0).equals("svok")) {
+            services(context, userId);
+            return;
+        }
+        conversations.clear(context.user().id());
         switch (context.arg(0)) {
             case "mine" -> show(context, studios.ownedBy(userId).map(this::manage)
                     .orElseGet(StudioOwnerScreens::intro));
@@ -87,14 +98,14 @@ class StudioOwnerCallbackHandler extends CallbackHandler {
                 return StudioOwnerScreens.ask(field, false, null);
             }).orElseGet(() -> manage(studio));
             case "tg" -> manage(studios.update(userId, s -> s.setActive(!s.isActive())).orElse(studio));
-            case "of" -> StudioOwnerScreens.offerings(studios.offerings(studio.getId()));
+            case "of" -> offeringsScreen(studio);
             case "oa" -> {
                 conversations.begin(telegramId, ConversationStep.AWAITING_OFFERING, Map.of(STAGE_KEY, "TITLE"));
                 yield StudioOwnerScreens.askOfferingTitle();
             }
             case "orm" -> {
                 parse(context.arg(1)).ifPresent(id -> studios.removeOffering(userId, id));
-                yield StudioOwnerScreens.offerings(studios.offerings(studio.getId()));
+                yield offeringsScreen(studio);
             }
             case "md" -> StudioOwnerScreens.media(studios.mediaCount(studio.getId()));
             case "ma" -> {
@@ -123,6 +134,44 @@ class StudioOwnerCallbackHandler extends CallbackHandler {
         };
         if (screen != null) {
             show(context, screen);
+        }
+    }
+
+    private Screen offeringsScreen(Studio studio) {
+        List<StudioOffering> offerings = studios.offerings(studio.getId());
+        return StudioOwnerScreens.offerings(offerings, studios.serviceLabels(offerings));
+    }
+
+    /** Ticks or unticks a service of the package being made, or moves on to its price once the choice is done. */
+    private void services(CallbackContext context, Long userId) {
+        long telegramId = context.user().id();
+        Optional<ConversationState> state = conversations.find(telegramId)
+                .filter(found -> found.getStep() == ConversationStep.AWAITING_OFFERING
+                        && "SERVICES".equals(found.getData().get(STAGE_KEY)));
+        Optional<Studio> studio = studios.ownedBy(userId);
+        if (state.isEmpty() || studio.isEmpty()) {
+            conversations.clear(telegramId);
+            show(context, studio.map(this::offeringsScreen).orElseGet(StudioOwnerScreens::intro));
+            return;
+        }
+        Map<String, String> data = new HashMap<>(state.get().getData());
+        String title = data.getOrDefault(TITLE_KEY, "");
+        ServiceSelection chosen = ServiceSelection.parse(data.get(SERVICES_KEY));
+        if (context.arg(0).equals("sv")) {
+            List<ServiceType> catalog = studios.selectableServices();
+            long id = parse(context.arg(1)).orElse(-1L);
+            if (catalog.stream().anyMatch(service -> service.getId() == id)) {
+                chosen = chosen.toggled(id);
+            }
+            data.put(SERVICES_KEY, chosen.encode());
+            conversations.begin(telegramId, ConversationStep.AWAITING_OFFERING, data);
+            show(context, StudioOwnerScreens.pickServices(title, catalog, chosen, false));
+        } else if (chosen.isEmpty()) {
+            show(context, StudioOwnerScreens.pickServices(title, studios.selectableServices(), chosen, true));
+        } else {
+            data.put(STAGE_KEY, "PRICE");
+            conversations.begin(telegramId, ConversationStep.AWAITING_OFFERING, data);
+            show(context, StudioOwnerScreens.askOfferingPrice());
         }
     }
 
